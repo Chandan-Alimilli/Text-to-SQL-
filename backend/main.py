@@ -220,9 +220,9 @@ async def get_data(request: QueryRequest):
             "sql": sql.strip()
         }
 
-        print("✅ Prompt:", prompt)
-        print("📄 SQL:", sql.strip())
-        print("📦 Response:", response_data["response"])
+        print("  Prompt  :", prompt)
+        print("  SQL query  :", sql.strip())
+        print("  Response    :", response_data["response"])
 
         return response_data
 
