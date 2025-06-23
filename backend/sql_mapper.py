@@ -3,7 +3,13 @@ import sqlite3
 import spacy
 from itertools import combinations
 
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    # Automatically download model if not found (for local dev)
+    from spacy.cli import download
+    download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 DB_PATH = "chase_demo.db"
 
