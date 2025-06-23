@@ -6,4 +6,4 @@ blis==0.7.11
 catalogue==2.0.10
 thinc==8.1.12
 numpy==1.26.4
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.6.1/en_core_web_sm-3.6.1-py3-none-any.whl
+
