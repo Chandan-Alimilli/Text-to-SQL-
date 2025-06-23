@@ -21,20 +21,32 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import { motion } from "framer-motion";
 
 const suggestions = [
+  { text: "show all customer names and branch location.", icon: <GroupIcon /> },
   { text: "List all branch locations.", icon: <LocationCityIcon /> },
+  {
+    text: "Show customer names with their transaction amounts.",
+    icon: <PersonIcon />,
+  },
   { text: "What is the total number of branches?", icon: <StorageIcon /> },
-  { text: "Show average staff count per branch.", icon: <GroupIcon /> },
+  { text: "Get customer email and branch location", icon: <GroupIcon /> },
+  {
+    text: "show all transaction amounts and customer names",
+    icon: <BusinessIcon />,
+  },
   {
     text: "List all customers with their branch names and emails.",
     icon: <PersonIcon />,
   },
+  { text: "Show average staff count per branch.", icon: <GroupIcon /> },
   {
     text: "What is the total amount spent by each customer?",
     icon: <PieChartIcon />,
   },
-  { text: "Which customer spent the most?", icon: <TextFieldsIcon /> },
-  { text: "Show number of customers by branch.", icon: <GroupIcon /> },
-  { text: "List all transactions with customer names.", icon: <StorageIcon /> },
+  {
+    text: "show all customers by their customer names",
+    icon: <TextFieldsIcon />,
+  },
+
   { text: "Which branch generated the most revenue?", icon: <BusinessIcon /> },
 ];
 
@@ -46,7 +58,7 @@ export default function Chatbox() {
   const [toolType, setToolType] = useState("text");
   const [toolOpen, setToolOpen] = useState(false);
   const [lastBotText, setLastBotText] = useState("");
-  const [getSQLQuery, setGetSQLQuery] = useState(false);
+  const [getSQLQuery, setGetSQLQuery] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [firstUserMessageSent, setFirstUserMessageSent] = useState(false);
 
@@ -66,7 +78,7 @@ export default function Chatbox() {
     setFirstUserMessageSent(true);
 
     try {
-      const endpoint = getSQLQuery ? "query" : "data";
+      const endpoint = getSQLQuery ? "query" : "data"; // Important: reversed
       const res = await fetch(`http://localhost:8000/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,49 +86,49 @@ export default function Chatbox() {
       });
 
       const data = await res.json();
-
-      const resultData = data.response;
       const sql = data.sql || null;
-      const message =
-        Array.isArray(resultData) && resultData.length
-          ? null
-          : typeof resultData === "string"
-          ? resultData
-          : "No data found.";
-
+      const resultData = data.response;
       const newMessages = [];
 
       if (getSQLQuery) {
+        // ONLY show SQL query from /query
         newMessages.push({
           type: "incoming",
-          text: `Generated SQL  Query :\n${sql || "N/A"}`,
+          isSqlQuery: true,
+          heading: "SQL query generated successfully",
+          text: sql || "N/A",
         });
+      } else {
+        // Show BOTH query and data from /data
+        const formatted =
+          Array.isArray(resultData) && resultData.length
+            ? resultData
+                .map((obj) =>
+                  Object.entries(obj)
+                    .map(([key, val]) => `${key}: ${val}`)
+                    .join("\n")
+                )
+                .join("\n\n")
+            : typeof resultData === "string"
+            ? resultData
+            : "No data found.";
+
+        newMessages.push({
+          type: "incoming",
+          isSqlQuery: true,
+          heading: " Data + Query from your text",
+          text: `Data: ${formatted}\n\nQuery: ${sql}`,
+        });
+        setLastBotText(resultData);
       }
-
-      const formatted =
-        Array.isArray(resultData) && resultData.length
-          ? resultData
-              .map((obj) =>
-                Object.entries(obj)
-                  .map(([key, val]) => `${key}: ${val}`)
-                  .join("\n")
-              )
-              .join("\n\n")
-          : message || "No data found.";
-
-      newMessages.push({ type: "incoming", text: formatted });
-      // setLastBotText(resultData);
-
-      setLastBotText(resultData);
 
       setMessages((prev) => [...prev, ...newMessages]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { type: "incoming", text: "❌ Error reaching the server." },
+        { type: "incoming", text: "\u274c Error reaching the server." },
       ]);
     }
-
     setLoading(false);
   };
 
@@ -260,24 +272,22 @@ export default function Chatbox() {
               transition={{
                 type: "spring",
                 duration: 0.4,
-                bounce: 0.2,
+                bounce: 0.3,
               }}
               animate={{
                 x: getSQLQuery ? 180 : 0,
               }}
-              className={`absolute top-1 left-1 w-[178px] h-12 rounded-full text-white text-sm font-bold flex items-center justify-center text-center px-2 transition-colors ${
+              className={`absolute top-1 left-1 w-[170px] h-12 rounded-full text-white text-sm font-bold flex items-center justify-center text-center px-2 transition-colors mx- ${
                 getSQLQuery ? "bg-red-500" : "bg-blue-500"
               }`}
             >
-              {getSQLQuery
-                ? "Get Data Along With Query"
-                : "Get Data for the Prompt"}
+              {getSQLQuery ? "Get SQL Query  " : "Get Data With Query "}
             </motion.div>
 
             {/* Optional static background text (dimmed for clarity) */}
-            <div className="flex w-full justify-between px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap">
-              <span>Get Data for the Prompt</span>
+            <div className="flex w-full justify-between px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap mx-2">
               <span>Get Data Along With Query</span>
+              <span>Get SQL Query from Prompt </span>
             </div>
           </button>
         </div>
@@ -297,7 +307,7 @@ export default function Chatbox() {
           >
             <div className="flex gap-3 items-start max-w-[80%]">
               {msg.type === "incoming" && (
-                <div className="w-10 h-10 rounded-full  flex items-center justify-center overflow-hidden">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
                   <img
                     src={chase}
                     alt="Chase"
@@ -305,6 +315,7 @@ export default function Chatbox() {
                   />
                 </div>
               )}
+
               <div
                 className={`rounded-xl px-4 py-2 text-white text-base md:text-lg ${
                   msg.type === "outgoing"
@@ -312,7 +323,33 @@ export default function Chatbox() {
                     : "bg-gray-700 rounded-bl-none"
                 }`}
               >
-                {msg.text}
+                {/* SQL query response (formatted with header) */}
+                {msg.isSqlQuery ? (
+                  <div>
+                    <div className="text-blue-400 font-semibold mb-2">
+                      {msg.heading}
+                    </div>
+                    <div className="text-sm font-mono whitespace-pre-wrap">
+                      {msg.text}
+                    </div>
+                  </div>
+                ) : msg.isCombinedQuery ? (
+                  <div>
+                    <div className="text-red-400 font-semibold mb-2">
+                      {msg.heading}
+                    </div>
+                    <div className="text-sm whitespace-pre-wrap mb-2">
+                      <strong className="text-white">Data:</strong>{" "}
+                      <span className="text-gray-200">{msg.dataText}</span>
+                    </div>
+                    <div className="text-sm font-mono text-gray-300 whitespace-pre-wrap">
+                      <strong className="text-white">Query:</strong>{" "}
+                      {msg.sqlText}
+                    </div>
+                  </div>
+                ) : (
+                  msg.text
+                )}
               </div>
             </div>
           </div>
