@@ -9,3 +9,9 @@ pip install -r backend/requirements.txt --prefer-binary
 
 # Download spaCy language model
 python -m spacy download en_core_web_sm
+
+
+#!/bin/bash
+pip install --upgrade pip
+pip install --prefer-binary -r backend/requirements.txt
+python -m spacy download en_core_web_sm
