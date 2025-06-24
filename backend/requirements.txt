@@ -1,4 +1,2 @@
 fastapi
 uvicorn
-numpy==1.26.4
-spacy==3.6.1
