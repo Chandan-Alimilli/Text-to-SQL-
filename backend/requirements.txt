@@ -1,9 +1,11 @@
 fastapi
 uvicorn
 
-spacy==3.6.1
+
 blis==0.7.11
 catalogue==2.0.10
 thinc==8.1.12
 numpy==1.26.4
 
+spacy==3.6.1
+# DO NOT include en_core_web_sm here!
