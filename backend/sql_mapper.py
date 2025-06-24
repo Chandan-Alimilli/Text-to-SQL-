@@ -1,6 +1,7 @@
 
 import sqlite3
 import spacy
+# print("spaCy version:", spacy.__version__)
 from itertools import combinations
 
 try:
