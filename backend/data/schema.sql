@@ -1,4 +1,3 @@
-
 -- Drop existing tables if they exist
 DROP TABLE IF EXISTS performance;
 DROP TABLE IF EXISTS transactions;
@@ -43,13 +42,13 @@ CREATE TABLE performance (
 );
 
 -- Seed data for branches
-INSERT INTO branches (id, branch, location) VALUES
+INSERT INTO branches (id, name, location) VALUES
 (1, 'Chase Manhattan', 'New York, NY'),
 (2, 'Chase Downtown', 'Chicago, IL'),
 (3, 'Chase Westlake', 'Austin, TX');
 
 -- Seed data for customers
-INSERT INTO customers (id, customer_name, email, branch_id) VALUES
+INSERT INTO customers (id, name, email, branch_id) VALUES
 (1, 'Alice Johnson', 'alice@chase.com', 1),
 (2, 'Bob Smith', 'bob@chase.com', 2),
 (3, 'Charlie Brown', 'charlie@chase.com', 1),

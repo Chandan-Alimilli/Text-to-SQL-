@@ -74,13 +74,58 @@ def find_join_path(tables, fk_map):
     return joins if len(used) == len(tables) else []
 
 def generate_sql_query(slots):
+    import sqlite3
     prompt = slots.get("prompt", "")
-    keywords = extract_keywords(prompt)
+    conn = sqlite3.connect(DB_PATH)
     schema, fk_map = get_schema_with_fks()
 
+    def find_value_matches(value, schema, conn):
+        cursor = conn.cursor()
+        matches = []
+        for table, columns in schema.items():
+            for col in columns:
+                try:
+                    query = f"SELECT * FROM {table} WHERE {col} LIKE ? LIMIT 1"
+                    cursor.execute(query, (f"%{value}%",))
+                    row = cursor.fetchone()
+                    if row:
+                        matches.append((table, col, value))
+                except sqlite3.OperationalError:
+                    continue
+        return matches
+
+    # Step 1: Check for direct value match
+    tokens = [token.text for token in nlp(prompt) if token.is_alpha and not token.is_stop]
+    value_filters = []
+    for token in tokens:
+        value_matches = find_value_matches(token, schema, conn)
+        if value_matches:
+            value_filters.extend(value_matches)
+
+    if value_filters:
+        results = []
+        seen_rows = set()
+        combined_queries = []
+        for table, col, val in value_filters:
+            cursor = conn.cursor()
+            query = f"SELECT * FROM {table} WHERE {col} LIKE '%{val}%' LIMIT 5;"
+            cursor.execute(f"SELECT * FROM {table} WHERE {col} LIKE ? LIMIT 5", (f"%{val}%",))
+            rows = cursor.fetchall()
+            for row in rows:
+                if (table, row) not in seen_rows:
+                    results.append(f"-- {table}: {row}")
+                    seen_rows.add((table, row))
+            combined_queries.append(query)
+
+        conn.close()
+        return "\n".join(combined_queries + results)
+
+    # Step 2: Regular dynamic SQL flow
+    keywords = extract_keywords(prompt)
     scored = score_tables(keywords, schema)
     top_tables = [table for table, score in scored if score > 0][:2]
     if not top_tables:
+        conn.close()
         return "UNSUPPORTED"
 
     joins = find_join_path(top_tables, fk_map)
@@ -113,4 +158,5 @@ def generate_sql_query(slots):
 
         return f"SELECT {col_str} FROM {from_tbl} JOIN {to_tbl} ON {from_tbl}.{from_col} = {to_tbl}.{to_col}{where_clause} LIMIT 10;"
 
+    conn.close()
     return "UNSUPPORTED"
