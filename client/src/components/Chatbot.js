@@ -39,7 +39,7 @@ const suggestions = [
   },
   { text: "Show average staff count per branch.", icon: <GroupIcon /> },
   {
-    text: "What is the total amount spent by each customer?",
+    text: "show all customer spent amount and categories",
     icon: <PieChartIcon />,
   },
   {
