@@ -210,29 +210,34 @@ export default function Chatbox() {
 
   return (
     <div className="min-h-screen bg-[#cceafb] text-white font-sans overflow-hidden py-5 p-6 md:p-10">
-      <div className="flex justify-between items-center mb-6 md:mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center text-center gap-2 mb-6 md:mb-8">
         <img
           src={logo}
           onClick={() => navigate("/")}
           alt="Logo"
           className="h-10 cursor-pointer"
         />
-        <p className="text-l  text-black bg-gradient-to-r   uppercase">
+        <a
+          href="https://www.linkedin.com/in/chandan-allimilli/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-l text-black bg-gradient-to-r uppercase hover:underline"
+        >
           Developed by Chandan
-        </p>
+        </a>
       </div>
 
       <header className="max-w-4xl mx-auto p-4">
         {!firstUserMessageSent && (
           <div>
-            <h1 className="text-5xl flex justify-center font-bold bg-gradient-to-r from-blue-500 to-black bg-clip-text text-transparent text-center">
-              Hello, Team
-              <span>
-                <img src={logo} alt="Logo" className="h-16 ml-1 p-1" />
-              </span>
-            </h1>
+            <div className="flex items-center justify-center gap-2 flex-wrap md:flex-nowrap">
+              <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 to-black bg-clip-text text-transparent text-center">
+                Hello, Team
+              </h1>
+              <img src={logo} alt="Logo" className="h-16 md:h-20 pt-4" />
+            </div>
 
-            <p className="text-3xl flex font-bold bg-gradient-to-r from-blue-800 to-black bg-clip-text text-transparent text-center">
+            <p className="text-xl md:text-3xl flex font-bold bg-gradient-to-r from-blue-800 to-black bg-clip-text text-transparent text-center">
               From question to query — turn natural language into real SQL
               insights
             </p>
@@ -263,7 +268,7 @@ export default function Chatbox() {
           </ul>
         )}
 
-        <div className="flex items-center justify-center mt-4 text-black ">
+        {/* <div className="flex items-center justify-center mt-4 text-black ">
           <button
             onClick={() => setGetSQLQuery(!getSQLQuery)}
             className={`relative w-[360px] border border-gray-500 h-14 rounded-full px-1 transition-colors duration-300 overflow-hidden ${
@@ -288,9 +293,40 @@ export default function Chatbox() {
             </motion.div>
 
             {/* Optional static background text (dimmed for clarity) */}
-            <div className="flex w-full justify-between px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap mx-2">
+        {/* <div className="flex w-full justify-between px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap mx-2">
               <span>Get Data Along With Query</span>
               <span>Get SQL Query from Prompt </span>
+            </div>
+          </button>
+        </div> */}
+
+        <div className="flex items-center justify-center mt-4 text-black px-3">
+          <button
+            onClick={() => setGetSQLQuery(!getSQLQuery)}
+            className={`relative w-full max-w-xs sm:max-w-md lg:w-[360px] border border-gray-500 h-14 rounded-full transition-colors duration-300 overflow-hidden ${
+              getSQLQuery ? "bg-red-100" : "bg-blue-200"
+            }`}
+          >
+            <motion.div
+              layout
+              transition={{
+                type: "spring",
+                duration: 0.3,
+                bounce: 0.6,
+              }}
+              animate={{
+                left: getSQLQuery ? "50%" : "0%",
+              }}
+              className={`absolute top-1 h-12 w-1/2 rounded-full text-white text-sm font-bold flex items-center justify-center transition-all duration-75 ${
+                getSQLQuery ? "bg-red-500" : "bg-blue-500"
+              }`}
+            >
+              {getSQLQuery ? "Get SQL Query" : "Get Data"}
+            </motion.div>
+
+            <div className="flex w-full justify-between px-3 sm:px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap">
+              <span className="truncate">Get Data Along With Query</span>
+              <span className="truncate">Get SQL Query from Prompt</span>
             </div>
           </button>
         </div>
@@ -391,7 +427,7 @@ export default function Chatbox() {
           lastBotText.length > 0 && <TableRenderer data={parseTableData()} />}
       </div>
 
-      <div className="fixed bottom-0 w-full bg-[#cceafb] p-4">
+      {/* <div className="fixed bottom-0 w-full bg-[#cceafb] p-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -465,6 +501,89 @@ export default function Chatbox() {
             title="Speak"
           >
             <MicIcon />
+          </button>
+        </form>
+      </div> */}
+
+      <div className="fixed bottom-0 w-full bg-[#cceafb] p-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage(input);
+          }}
+          className="max-w-4xl sm:mx-auto ml-[-20px] sm:ml-0 flex items-center gap-2"
+        >
+          {/* Tools Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setToolOpen(!toolOpen)}
+              className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1f2235] hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white"
+              title="Tools"
+            >
+              <TuneIcon className="text-xs sm:text-sm" />
+            </button>
+
+            {toolOpen && (
+              <div className="absolute bottom-12 left-0 w-40 sm:w-48 bg-[#1e2237] shadow-lg rounded-xl text-white p-2 z-50">
+                {["Text", "Table", "Bar"].map((type) => (
+                  <div
+                    key={type}
+                    onClick={() => {
+                      setToolType(
+                        type.toLowerCase().includes("line")
+                          ? "line"
+                          : type.toLowerCase().includes("bar")
+                          ? "bar"
+                          : type.toLowerCase().includes("table")
+                          ? "table"
+                          : "text"
+                      );
+                      setToolOpen(false);
+                    }}
+                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#2a2e4d] ${
+                      toolType === type ? "bg-[#2a2e4d] font-semibold" : ""
+                    }`}
+                  >
+                    {type === "Text" && <TextFieldsIcon />}
+                    {type === "Bar" && <BarChartIcon />}
+                    {type === "Line Graph" && <InsightsIcon />}
+                    {type === "Table" && <TableChartIcon />}
+                    <span className="capitalize">{type}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Input Field */}
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask anything..."
+            className="flex-1 h-11 sm:h-12 rounded-full px-4 bg-[#1f2235] text-white placeholder-gray-400 focus:outline-none text-sm"
+            required
+          />
+
+          {/* Send Button */}
+          <button
+            type="submit"
+            className="w-9 h-9 sm:w-10 ml-[10px] sm:h-10 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white"
+          >
+            <SendIcon className="text-xs sm:text-sm" />
+          </button>
+
+          {/* Mic Button */}
+          <button
+            type="button"
+            onClick={handleMicClick}
+            className={`w-9 h-9 sm:w-10 sm:h-10 bg-[#1f2235] mr-8 hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white transition ${
+              isListening ? "animate-pulse bg-red-400" : ""
+            }`}
+            title="Speak"
+          >
+            <MicIcon className="text-xs sm:text-sm" />
           </button>
         </form>
       </div>
