@@ -6,7 +6,7 @@ from sql_mapper import generate_sql_query
 from nlp_utils import extract_intent_and_slots
 import sqlite3
 from db import execute_sql
-import os
+
 
 app = FastAPI()
 
@@ -75,7 +75,11 @@ async def get_data(request: QueryRequest):
         "response": "SQL query generated successfully."
     }
 
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    import os
 
+    port = int(os.environ.get("PORT", 8000))  # Render injects PORT
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
