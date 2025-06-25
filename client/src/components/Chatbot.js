@@ -511,7 +511,7 @@ export default function Chatbox() {
             e.preventDefault();
             sendMessage(input);
           }}
-          className="max-w-4xl sm:mx-auto ml-[-20px] sm:ml-0 flex items-center gap-2"
+          className="w-full max-w-4xl px-2 sm:px-4 md:px-0 mx-auto flex items-center gap-2"
         >
           {/* Tools Button */}
           <div className="relative">
