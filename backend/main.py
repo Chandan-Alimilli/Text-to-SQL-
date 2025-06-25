@@ -6,6 +6,7 @@ from sql_mapper import generate_sql_query
 from nlp_utils import extract_intent_and_slots
 import sqlite3
 from db import execute_sql
+import os
 
 app = FastAPI()
 
@@ -73,9 +74,6 @@ async def get_data(request: QueryRequest):
         "sql": sql.strip(),
         "response": "SQL query generated successfully."
     }
-
-# Render-compatible server start
-import os
 
 if __name__ == "__main__":
     import uvicorn
