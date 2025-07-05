@@ -51,13 +51,34 @@ def score_tables(keywords, schema):
         scores[table] = table_score + column_score
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
+# def detect_agg_type(keywords):
+#     joined = " ".join(keywords)
+#     if "how many" in joined or "count" in keywords or "number" in keywords:
+#         return "COUNT"
+#     if "sum" in keywords or "total" in keywords:
+#         return "SUM"
+#     return "SELECT"
+
+
 def detect_agg_type(keywords):
-    joined = " ".join(keywords)
-    if "how many" in joined or "count" in keywords or "number" in keywords:
-        return "COUNT"
-    if "sum" in keywords or "total" in keywords:
-        return "SUM"
+    agg_keywords = {
+        "COUNT": {"how many", "count", "number", "total count", "total number"},
+        "SUM": {"sum", "total", "amount", "total sum", "added"},
+        "AVG": {"average", "mean", "avg"},
+        "MAX": {"maximum", "max"},
+        "MIN": {"minimum", "min"},
+        "SELECT": {"select", "show", "display", "list", "retrieve"}
+    }
+
+    joined = " ".join(keywords).lower()
+
+    for agg_type, trigger_words in agg_keywords.items():
+        for word in trigger_words:
+            if word in joined or word in keywords:
+                return agg_type
+
     return "SELECT"
+
 
 def find_join_path(tables, fk_map):
     joins = []
