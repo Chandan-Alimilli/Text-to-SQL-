@@ -58,7 +58,7 @@ export default function Chatbox() {
   const [toolType, setToolType] = useState("text");
   const [toolOpen, setToolOpen] = useState(false);
   const [lastBotText, setLastBotText] = useState("");
-  const [getSQLQuery, setGetSQLQuery] = useState(true);
+  const [getSQLQuery, setGetSQLQuery] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [firstUserMessageSent, setFirstUserMessageSent] = useState(false);
 
@@ -245,7 +245,7 @@ export default function Chatbox() {
         )}
 
         <button
-          className="text-black font-medium mt-4"
+          className="bg-gradient-to-r from-blue-900 to-black bg-clip-text text-transparent font-medium mt-4"
           onClick={() => setShowSuggestions(!showSuggestions)}
         >
           {showSuggestions ? "▲ Hide suggestions" : "▼ Show suggestions"}
@@ -257,7 +257,7 @@ export default function Chatbox() {
               <li
                 key={idx}
                 onClick={() => sendMessage(text)}
-                className="min-w-[222px] bg-[#1e2237] hover:bg-[#2a2e4d] cursor-pointer p-5 rounded-xl flex flex-col justify-between"
+                className="min-w-[222px] bg-gradient-to-r from-gray-900 to-gray-700 hover:bg-[#2a2e4d] cursor-pointer p-5 rounded-xl flex flex-col justify-between"
               >
                 <h4 className="text-white text-sm leading-snug">{text}</h4>
                 <div className="w-7 h-7 mt-5 rounded-full flex items-center justify-center bg-black text-white">
@@ -268,43 +268,13 @@ export default function Chatbox() {
           </ul>
         )}
 
-        {/* <div className="flex items-center justify-center mt-4 text-black ">
-          <button
-            onClick={() => setGetSQLQuery(!getSQLQuery)}
-            className={`relative w-[360px] border border-gray-500 h-14 rounded-full px-1 transition-colors duration-300 overflow-hidden ${
-              getSQLQuery ? "bg-red-100" : "bg-blue-200"
-            }`}
-          >
-            <motion.div
-              layout
-              transition={{
-                type: "spring",
-                duration: 0.4,
-                bounce: 0.3,
-              }}
-              animate={{
-                x: getSQLQuery ? 180 : 0,
-              }}
-              className={`absolute top-1 left-1 w-[170px] h-12 rounded-full text-white text-sm font-bold flex items-center justify-center text-center px-2 transition-colors mx- ${
-                getSQLQuery ? "bg-red-500" : "bg-blue-500"
-              }`}
-            >
-              {getSQLQuery ? "Get SQL Query  " : "Get Data With Query "}
-            </motion.div>
-
-            {/* Optional static background text (dimmed for clarity) */}
-        {/* <div className="flex w-full justify-between px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap mx-2">
-              <span>Get Data Along With Query</span>
-              <span>Get SQL Query from Prompt </span>
-            </div>
-          </button>
-        </div> */}
-
         <div className="flex items-center justify-center mt-4 text-black px-3">
           <button
             onClick={() => setGetSQLQuery(!getSQLQuery)}
             className={`relative w-full max-w-xs sm:max-w-md lg:w-[360px] border border-gray-500 h-14 rounded-full transition-colors duration-300 overflow-hidden ${
-              getSQLQuery ? "bg-red-100" : "bg-blue-200"
+              getSQLQuery
+                ? "bg-gradient-to-r from-red-200 to-red-400"
+                : "bg-gradient-to-r from-blue-200 to-blue-400"
             }`}
           >
             <motion.div
@@ -317,14 +287,16 @@ export default function Chatbox() {
               animate={{
                 left: getSQLQuery ? "50%" : "0%",
               }}
-              className={`absolute top-1 h-12 w-1/2 rounded-full text-white text-sm font-bold flex items-center justify-center transition-all duration-75 ${
-                getSQLQuery ? "bg-red-500" : "bg-blue-500"
+              className={`absolute top-1 h-12 w-1/2 px-2 rounded-full text-white text-sm font-bold flex items-center justify-center transition-all duration-75 ${
+                getSQLQuery
+                  ? "bg-gradient-to-r from-red-500 to-red-800"
+                  : "bg-gradient-to-r from-blue-400 to-blue-800"
               }`}
             >
               {getSQLQuery ? "Get SQL Query" : "Get Data"}
             </motion.div>
 
-            <div className="flex w-full justify-between px-3 sm:px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap">
+            <div className="flex w-full justify-between px-8 sm:px-5 text-xs font-medium z-10 text-gray-600 h-full items-center whitespace-nowrap">
               <span className="truncate">Get Data Along With Query</span>
               <span className="truncate">Get SQL Query from Prompt</span>
             </div>
@@ -358,8 +330,8 @@ export default function Chatbox() {
               <div
                 className={`rounded-xl px-4 py-2 text-white text-base md:text-lg ${
                   msg.type === "outgoing"
-                    ? "bg-blue-600 rounded-br-none"
-                    : "bg-gray-700 rounded-bl-none"
+                    ? "bg-gradient-to-r from-blue-500 to-blue-800 rounded-br-none"
+                    : "bg-gradient-to-r from-gray-900 to-gray-700 rounded-bl-none"
                 }`}
               >
                 {/* SQL query response (formatted with header) */}
@@ -427,84 +399,6 @@ export default function Chatbox() {
           lastBotText.length > 0 && <TableRenderer data={parseTableData()} />}
       </div>
 
-      {/* <div className="fixed bottom-0 w-full bg-[#cceafb] p-4">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage(input);
-          }}
-          className="max-w-4xl mx-auto flex items-center gap-3"
-        >
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setToolOpen(!toolOpen)}
-              className="w-12 h-12 bg-[#1f2235] hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white"
-              title="Tools"
-            >
-              <TuneIcon />
-            </button>
-            {toolOpen && (
-              <div className="absolute bottom-16 left-0 w-48 bg-[#1e2237] shadow-lg rounded-xl text-white p-2 z-50">
-                {["Text", "Table", "Bar"].map((type) => (
-                  <div
-                    key={type}
-                    onClick={() => {
-                      setToolType(
-                        type.toLowerCase().includes("line")
-                          ? "line"
-                          : type.toLowerCase().includes("bar")
-                          ? "bar"
-                          : type.toLowerCase().includes("table")
-                          ? "table"
-                          : "text"
-                      );
-                      setToolOpen(false);
-                    }}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#2a2e4d] ${
-                      toolType === type ? "bg-[#2a2e4d] font-semibold" : ""
-                    }`}
-                  >
-                    {type === "Text" && <TextFieldsIcon />}
-                    {type === "Bar" && <BarChartIcon />}
-                    {type === "Line Graph" && <InsightsIcon />}
-                    {type === "Table" && <TableChartIcon />}
-                    <span className="capitalize">{type}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask anything..."
-            className="flex-1 h-14 rounded-full px-6 bg-[#1f2235] text-white placeholder-gray-400 focus:outline-none text-base md:text-lg"
-            required
-          />
-
-          <button
-            type="submit"
-            className="w-12 h-12 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white"
-          >
-            <SendIcon />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleMicClick}
-            className={`bg-[#1f2235] hover:bg-[#2a2e4d] w-12 h-12 rounded-full flex items-center justify-center text-white transition ${
-              isListening ? "animate-pulse bg-red-400" : ""
-            }`}
-            title="Speak"
-          >
-            <MicIcon />
-          </button>
-        </form>
-      </div> */}
-
       <div className="fixed bottom-0 w-full bg-[#cceafb] p-3">
         <form
           onSubmit={(e) => {
@@ -518,7 +412,7 @@ export default function Chatbox() {
             <button
               type="button"
               onClick={() => setToolOpen(!toolOpen)}
-              className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1f2235] hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white"
+              className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-blue-800  hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white"
               title="Tools"
             >
               <TuneIcon className="text-xs sm:text-sm" />
@@ -541,8 +435,10 @@ export default function Chatbox() {
                       );
                       setToolOpen(false);
                     }}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#2a2e4d] ${
-                      toolType === type ? "bg-[#2a2e4d] font-semibold" : ""
+                    className={`flex items-center gap-2 p-2 rounded bg-gradient-to-r from-gray-800 to-gray-900 cursor-pointer  ${
+                      toolType === type
+                        ? "bg-gradient-to-r from-blue-500 to-blue-800  font-semibold"
+                        : ""
                     }`}
                   >
                     {type === "Text" && <TextFieldsIcon />}
@@ -562,14 +458,14 @@ export default function Chatbox() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask anything..."
-            className="flex-1 h-11 sm:h-12 rounded-full px-4 bg-[#1f2235] text-white placeholder-gray-400 focus:outline-none text-sm"
+            className="flex-1 h-11 sm:h-12 rounded-full px-4  bg-gradient-to-r from-gray-900 to-gray-700 text-white placeholder-gray-400 focus:outline-none text-sm"
             required
           />
 
           {/* Send Button */}
           <button
             type="submit"
-            className="w-9 h-9 sm:w-10 ml-[10px] sm:h-10 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-white"
+            className="w-9 h-9 sm:w-10 ml-[10px] sm:h-10 bg-gradient-to-r from-blue-500 to-blue-800  hover:bg-blue-700 rounded-full flex items-center justify-center text-white"
           >
             <SendIcon className="text-xs sm:text-sm" />
           </button>
@@ -578,8 +474,8 @@ export default function Chatbox() {
           <button
             type="button"
             onClick={handleMicClick}
-            className={`w-9 h-9 sm:w-10 sm:h-10 bg-[#1f2235] mr-8 hover:bg-[#2a2e4d] rounded-full flex items-center justify-center text-white transition ${
-              isListening ? "animate-pulse bg-red-400" : ""
+            className={`w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-blue-800 mr-8 rounded-full flex items-center justify-center text-white transition ${
+              isListening ? "animate-pulse bg-red-600" : ""
             }`}
             title="Speak"
           >

@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sql_mapper import generate_sql_query
-from nlp_utils import extract_intent_and_slots
+# from nlp_utils import extract_intent_and_slots
 import sqlite3
 from db import execute_sql
 
