@@ -15,7 +15,7 @@ export default function TableRenderer({ data }) {
           Data Table
         </caption>
         <thead>
-          <tr className="bg-[#1e2237] text-white">
+          <tr className="bg-gradient-to-r from-gray-900 to-gray-700 text-white">
             {headers.map((key, i) => (
               <th key={i} className="p-2 border border-gray-300 text-left">
                 {key}
@@ -25,7 +25,10 @@ export default function TableRenderer({ data }) {
         </thead>
         <tbody>
           {data.map((row, i) => (
-            <tr key={i} className="even:bg-blue-100 odd:bg-blue-200">
+            <tr
+              key={i}
+              className="even:bg-blue-100 odd:bg-gradient-to-r from-blue-200 to-blue-300"
+            >
               {headers.map((key, j) => (
                 <td key={j} className="p-2 border border-gray-500">
                   {typeof row[key] === "object"

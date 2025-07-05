@@ -474,8 +474,10 @@ export default function Chatbox() {
           <button
             type="button"
             onClick={handleMicClick}
-            className={`w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-blue-800 mr-8 rounded-full flex items-center justify-center text-white transition ${
-              isListening ? "animate-pulse bg-red-600" : ""
+            className={`w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-blue-900 mr-8 rounded-full flex items-center justify-center text-white transition ${
+              isListening
+                ? "animate-pulse bg-gradient-to-r from-red-500 to-red-900"
+                : ""
             }`}
             title="Speak"
           >
