@@ -1,0 +1,65 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Text To SQL</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="chatbot.css">
+</head>
+<body class="root">
+
+
+<div class="nav">
+    <img src="https://1000logos.net/wp-content/uploads/2021/05/Chase-logo.png" alt="Chase Logo" height="80">
+    <h2 class="nav-title"> Text To SQL</h2>
+    
+  </div>
+
+
+  <header class="header">
+    <!-- <h1 class="title">Hello, Team <span class="" > <img class="logo"  src="chase1.png"/></span></h1> -->
+    <p class="subtitle">From question to query — turn natural language into real SQL
+              insights</p>
+ 
+
+    <ul class="suggestion-list">
+  <li class="suggestion"><h4 class="text">show all names and branch location
+.</h4><span class="icon material-symbols-rounded">groups</span></li>
+  <li class="suggestion"><h4 class="text">List all branch locations.</h4><span class="icon material-symbols-rounded">location_city</span></li>
+  <li class="suggestion"><h4 class="text">Show customer names with their transaction amounts.</h4><span class="icon material-symbols-rounded">person</span></li>
+  <li class="suggestion"><h4 class="text">What is the total number of branches?</h4><span class="icon material-symbols-rounded">storage</span></li>
+  <li class="suggestion"><h4 class="text">Get customer email and branch location</h4><span class="icon material-symbols-rounded">groups</span></li>
+  <li class="suggestion"><h4 class="text">show all transaction amounts and customer names</h4><span class="icon material-symbols-rounded">business</span></li>
+  <li class="suggestion"><h4 class="text">List all customers with their branch names and emails.</h4><span class="icon material-symbols-rounded">person</span></li>
+  <li class="suggestion"><h4 class="text">Show average staff count per branch.</h4><span class="icon material-symbols-rounded">groups</span></li>
+  <li class="suggestion"><h4 class="text">show all customer spent amount and categories</h4><span class="icon material-symbols-rounded">pie_chart</span></li>
+  <li class="suggestion"><h4 class="text">show all customers and customer names</h4><span class="icon material-symbols-rounded">text_fields</span></li>
+  <li class="suggestion"><h4 class="text">Which branch generated the most revenue?</h4><span class="icon material-symbols-rounded">business</span></li>
+</ul>
+
+  </header>
+
+  <div class="chat-list" id="chat-list"></div>
+
+  <div class="typing-area">
+    <form class="typing-form" onsubmit="handleSendMessage(event)">
+      <div class="input-wrapper">
+        <input type="text" placeholder="Enter a prompt here" class="typing-input" id="user-input" required />
+        <button id="send-message-button" type="submit" class="icon material-symbols-rounded">send</button>
+      </div>
+      <div class="action-buttons">
+        <span id="theme-toggle-button" class="mode material-symbols-rounded">light_mode</span>
+        <span id="mic-button" class="mic material-symbols-rounded">mic</span>
+      </div>
+    </form>
+    <p class="disclaimer-text">This is a  Text TO SQL front-end demo </p>
+  </div>
+
+  <script src="chatbot.js"></script>
+</body>
+</html>
