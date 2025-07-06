@@ -80,8 +80,8 @@ export default function Chatbox() {
     try {
       const endpoint = getSQLQuery ? "query" : "data"; // Important: reversed
       const res = await fetch(
-        // `https://text-to-sql-vw6i.onrender.com/${endpoint}`,
-        ` http://localhost:8000/${endpoint}`,
+        `https://text-to-sql-vw6i.onrender.com/${endpoint}`,
+        // ` http://localhost:8000/${endpoint}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
