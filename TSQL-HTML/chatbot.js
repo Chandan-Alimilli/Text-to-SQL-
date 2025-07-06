@@ -171,9 +171,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   suggestions.forEach((s) => {
-    s.addEventListener("click", () =>
-      handleSuggestionClick(s.innerText.trim())
-    );
+    s.addEventListener("click", () => {
+      const text = s.querySelector(".text")?.innerText.trim();
+      handleSuggestionClick(text);
+    });
   });
 });
 

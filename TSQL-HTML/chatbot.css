@@ -218,7 +218,7 @@ body.hide-header .header {
 }
 
 .message .message-content {
-  max-width: 75%;
+  max-width: 105%;
   padding: 1rem 1.25rem;
   border-radius: 1rem;
   font-size: 0.95rem;

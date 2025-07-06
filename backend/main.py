@@ -28,6 +28,9 @@ def root():
 class QueryRequest(BaseModel):
     prompt: str
 
+    print("✅ Using PostgreSQL for database operations")
+
+
 # Endpoint: Get SQL + Data
 @app.post("/data")
 async def query(request: QueryRequest):
