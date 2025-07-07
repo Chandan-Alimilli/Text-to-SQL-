@@ -2,6 +2,7 @@ import spacy
 from itertools import combinations
 from db import get_conn, release_conn
 
+# 🔹 Load spaCy NLP model
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
@@ -9,17 +10,18 @@ except OSError:
     download("en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
+# 🔹 Dynamic schema + FK mapping from Snowflake
 def get_cached_schema():
     schema = {}
     fk_map = {}
     conn = get_conn()
     cursor = conn.cursor()
 
-    # Get tables in current schema
+    # Get all tables in current schema
     cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = CURRENT_SCHEMA()")
     tables = [row[0].lower() for row in cursor.fetchall()]
 
-    # Get columns
+    # Get columns for each table
     for table in tables:
         cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table.upper()}'")
         columns = [row[0].lower() for row in cursor.fetchall()]
@@ -43,10 +45,12 @@ def get_cached_schema():
     release_conn(conn)
     return schema, fk_map
 
+# 🔍 Extract important keywords from prompt
 def extract_keywords(prompt):
     doc = nlp(prompt.lower())
     return [token.lemma_ for token in doc if token.is_alpha and not token.is_stop]
 
+# 📊 Score tables based on relevance to prompt
 def score_tables(keywords, schema):
     scores = {}
     for table, columns in schema.items():
@@ -58,6 +62,7 @@ def score_tables(keywords, schema):
         return [sorted_scores[0]]
     return sorted_scores
 
+# 🔢 Detect aggregation type
 def detect_agg_type(keywords):
     agg_keywords = {
         "COUNT": {"how many", "count", "number"},
@@ -73,6 +78,7 @@ def detect_agg_type(keywords):
             return agg_type
     return "SELECT"
 
+# 🔗 Determine if a join is possible
 def find_join_path(tables, fk_map):
     joins = []
     used = set()
@@ -84,6 +90,7 @@ def find_join_path(tables, fk_map):
                 break
     return joins if len(used) == len(tables) else []
 
+# 🧠 Main function to generate SQL
 def generate_sql_query(slots):
     prompt = slots.get("prompt", "")
     schema, fk_map = get_cached_schema()
@@ -97,31 +104,39 @@ def generate_sql_query(slots):
     joins = find_join_path(top_tables, fk_map)
     agg = detect_agg_type(keywords)
 
+    # ✅ Case 1: Single table
     if len(top_tables) == 1:
         table = top_tables[0]
         cols = schema[table]
+
         matched_cols = []
         for col in cols:
             for kw in keywords:
                 if col == kw or kw in col:
-                    matched_cols.append(col)
+                    matched_cols.append(f'"{col.upper()}"')
+
         col_str = ", ".join(matched_cols) if matched_cols else "*"
+
         if agg == "COUNT":
             return f'SELECT COUNT(*) FROM "{table.upper()}";'
         elif agg == "SUM" and matched_cols:
-            return f'SELECT SUM("{matched_cols[0]}") FROM "{table.upper()}";'
+            return f'SELECT SUM({matched_cols[0]}) FROM "{table.upper()}";'
         else:
             return f'SELECT {col_str} FROM "{table.upper()}" LIMIT 10;'
 
+    # ✅ Case 2: Join between two tables
     elif joins:
         from_tbl, from_col, to_tbl, to_col = joins[0]
         matched_cols = []
+
         for table in top_tables:
             for col in schema[table]:
                 for kw in keywords:
                     if col == kw or kw in col:
-                        matched_cols.append(f'{table}.{col}')
+                        matched_cols.append(f'"{table.upper()}"."{col.upper()}"')
+
         col_str = ", ".join(matched_cols) if matched_cols else "*"
+
         return (
             f'SELECT {col_str} FROM "{from_tbl.upper()}" '
             f'JOIN "{to_tbl.upper()}" ON "{from_tbl.upper()}"."{from_col.upper()}" = "{to_tbl.upper()}"."{to_col.upper()}" LIMIT 10;'

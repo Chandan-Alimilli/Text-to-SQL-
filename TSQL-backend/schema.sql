@@ -85,6 +85,8 @@ INSERT INTO customers (customer_id, customer_name, customer_email, branch_id) VA
 (6, 'Fiona Glenanne', 'fiona@chase.com', 3),
 (7, 'George Miller', 'george@chase.com', 2);
 
+
+
 -- Seed transactions
 INSERT INTO transactions (transaction_id, customer_id, transaction_amount, transaction_category, transaction_date) VALUES
 (1, 1, 1200.00, 'Electronics', '2024-05-01'),
