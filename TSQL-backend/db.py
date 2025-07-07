@@ -1,49 +1,4 @@
 
-
-
-
-
-# import psycopg2
-# import os
-# from psycopg2.extras import RealDictCursor
-
-# # PostgreSQL URL
-# DATABASE_URL = "postgresql://postgres:JpqdXMBPXZqftuMThUgUBXnpzPgsXVOd@tramway.proxy.rlwy.net:44410/railway"
-
-
-# # Connect to PostgreSQL
-# conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-# cursor = conn.cursor()
-
-# def setup_database():
-#     """Initialize the database using schema.sql (optional if DB is preconfigured)"""
-#     try:
-#         schema_path = os.path.join("data", "schema.sql")
-#         with open(schema_path, "r") as f:
-#             schema_sql = f.read()
-#         cursor.execute(schema_sql)
-#         conn.commit()
-#         print("✅ PostgreSQL database initialized from schema.sql")
-#     except Exception as e:
-#         print(f"❌ Failed to set up PostgreSQL database: {e}")
-
-# def execute_sql(query: str):
-#     try:
-#         cursor.execute(query)
-#         rows = cursor.fetchall()
-#         return rows
-#     except Exception as e:
-#         conn.rollback()  # 🔥 This line is critical for PostgreSQL
-#         print(f"❌ SQL execution error: {e}")
-#         return [{"error": str(e)}]
-
-
-
-
-
-
-
-
 import sqlite3
 import os
 
