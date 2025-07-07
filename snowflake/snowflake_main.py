@@ -1,11 +1,9 @@
+# snowflake_main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sql_mapper import generate_sql_query
-from db import execute_sql, setup_database
-
-# Initialize SQLite database from schema
-setup_database()
+from snowflake_mapper import generate_sql_query
+from snowflake_db import execute_sql
 
 app = FastAPI()
 
@@ -19,7 +17,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "✅ Backend is running with SQLite"}
+    return {"message": "✅ Snowflake NLP Agent is running"}
 
 class QueryRequest(BaseModel):
     prompt: str
@@ -37,8 +35,8 @@ async def query(request: QueryRequest):
         }
 
     result = execute_sql(sql)
-
     return {
-        "sql": sql.strip(),
+        "sql": sql,
         "response": result if result else "No data found."
     }
+

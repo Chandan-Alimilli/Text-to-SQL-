@@ -1,7 +1,8 @@
+# snowflake_db.py
 import snowflake.connector
 import os
 
-# Setup proxy for JPMC
+# Proxy config (required inside JPMC network)
 os.environ["HTTPS_PROXY"] = "http://proxy.jpmchase.net:10443"
 os.environ["HTTP_PROXY"] = os.environ["HTTPS_PROXY"]
 os.environ["NO_PROXY"] = "jpmorganchase.net,169.254.169.254"
@@ -13,8 +14,7 @@ SNOWFLAKE_CONFIG = {
     "warehouse": "PROD_110575_DA_AUTO_WH",
     "database": "PROD_110575_ICDW_DB",
     "schema": "AUTO_V",
-    "role": "SYSADMIN",  # Optional: add if needed
-    "authenticator": "externalbrowser"  # Or use "snowflake" if password auth
+    "authenticator": "externalbrowser",  # or "snowflake" if using password
 }
 
 def get_conn():
