@@ -15,7 +15,7 @@ os.environ["NO_PROXY"] = "jpmorganchase.net,169.254.169.254"
 # ✅ Snowflake credentials (replace password before running)
 SNOWFLAKE_CONFIG = {
     "user": "F745794",
-    "password": "",  # 🔐 ← ENTER your Snowflake password here
+    "password": "",  
     "account": "ccpbawsuseast1vps.hassium.us-east-1.aws",
     "warehouse": "PROD_110575_DA_AUTO_WH",
     "database": "PROD_110575_ICDW_DB",
