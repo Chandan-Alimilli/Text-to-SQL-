@@ -1,93 +1,55 @@
+# db.py
 import os
-import logging
 import snowflake.connector
-from snowflake.connector.errors import Error
+from dotenv import load_dotenv
+import logging
 
-# ✅ Enable detailed logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+load_dotenv()
 
-# ✅ Proxy configuration for JPMC
+# Proxy config for JPMorgan (if needed)
 os.environ["HTTPS_PROXY"] = "http://proxy.jpmchase.net:10443"
 os.environ["HTTP_PROXY"] = os.environ["HTTPS_PROXY"]
-os.environ["NO_PROXY"] = "jpmorganchase.net,169.254.169.254"
+os.environ["NO_PROXY"] = "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.net,.eks"
 
-# ✅ Snowflake credentials (replace password before running)
+# Snowflake credentials
 SNOWFLAKE_CONFIG = {
     "user": "F745794",
-    "password": "",  
+    "authenticator": "externalbrowser",
     "account": "ccpbawsuseast1vps.hassium.us-east-1.aws",
-    "warehouse": "PROD_110575_DA_AUTO_WH",
+    "warehouse": "PROD_110575_DA_AUTO_L_WH",
     "database": "PROD_110575_ICDW_DB",
-    "schema": "AUTO_V"
+    "schema": "AUTO_V",
+    "role": "PROD_110575_SS_AUTO_DA_ADM_FR"
 }
 
-# ✅ Attempt to connect to Snowflake and fetch schema
-SCHEMA_CACHE = {}
-CONNECTED = False
-
-def try_connect_snowflake():
-    global CONNECTED
-    try:
-        conn = snowflake.connector.connect(**SNOWFLAKE_CONFIG)
-        CONNECTED = True
-        logger.info("✅ Snowflake connection established.")
-        return conn
-    except Error as e:
-        CONNECTED = False
-        logger.error("❌ Snowflake connection failed.")
-        logger.error(f"🔍 Reason: {str(e)}")
-        logger.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
-        return None
+fallback_notice = ""
 
 def get_connection():
-    if not CONNECTED:
+    try:
+        conn = snowflake.connector.connect(**SNOWFLAKE_CONFIG)
+        print("✅ Connected to Snowflake successfully.")
+        return conn
+    except Exception as e:
+        global fallback_notice
+        fallback_notice = f"❌ Snowflake connection failed.\n🔍 Reason: {e}"
+        print(fallback_notice)
+        logging.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
         return None
-    return snowflake.connector.connect(**SNOWFLAKE_CONFIG)
 
-def execute_sql(sql: str):
+def execute_sql(query):
     conn = get_connection()
     if not conn:
-        logger.warning("⚠️ No connection. Returning empty result.")
         return []
-    
+
     try:
         cursor = conn.cursor()
-        cursor.execute(sql)
-        result = cursor.fetchall()
+        cursor.execute(query)
         columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in result]
+        rows = cursor.fetchall()
+        return [dict(zip(columns, row)) for row in rows]
     except Exception as e:
-        logger.error(f"❌ SQL execution failed: {e}")
+        print(f"❌ SQL Execution error: {e}")
         return []
     finally:
-        try:
-            cursor.close()
+        if conn:
             conn.close()
-        except:
-            pass
-
-def fetch_dynamic_schema():
-    conn = try_connect_snowflake()
-    if not conn:
-        return None
-
-    schema = {}
-    try:
-        cursor = conn.cursor()
-        cursor.execute(f"""
-            SELECT table_name, column_name
-            FROM information_schema.columns
-            WHERE table_schema = '{SNOWFLAKE_CONFIG['schema']}'
-            ORDER BY table_name, ordinal_position;
-        """)
-        for table, column in cursor.fetchall():
-            if table not in schema:
-                schema[table] = []
-            schema[table].append(column)
-        cursor.close()
-        conn.close()
-        return schema
-    except Exception as e:
-        logger.error(f"❌ Failed to fetch schema: {e}")
-        return None
