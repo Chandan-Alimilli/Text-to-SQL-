@@ -2,7 +2,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from db import get_snowflake_connection, execute_sql
+from db import get_connection, execute_sql
+
 from mapper import generate_sql_query, summarize_response
 
 app = FastAPI()
@@ -18,7 +19,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     try:
-        conn = get_snowflake_connection()
+        conn = get_connection()
         if conn:
             logging.info("✅ Snowflake connection successful.")
             conn.close()
