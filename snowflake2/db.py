@@ -3,6 +3,7 @@ import os
 import snowflake.connector
 from dotenv import load_dotenv
 import logging
+import traceback
 
 load_dotenv()
 
@@ -31,8 +32,10 @@ def get_connection():
         return conn
     except Exception as e:
         global fallback_notice
-        fallback_notice = f"❌ Snowflake connection failed.\n🔍 Reason: {e}"
+        fallback_notice = f"❌ Snowflake connection failed.\n🔍 Reason: {str(e)}"
         print(fallback_notice)
+        print("🔧 Traceback:")
+        traceback.print_exc()
         logging.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
         return None
 
