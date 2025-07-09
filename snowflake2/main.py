@@ -1,38 +1,42 @@
-# main.py
-from fastapi import FastAPI, Request
+import logging
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from db import execute_sql
+from db import get_snowflake_connection, execute_sql
 from mapper import generate_sql_query, summarize_response
-import logging
 
 app = FastAPI()
 
-origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    try:
+        conn = get_snowflake_connection()
+        if conn:
+            logging.info("✅ Snowflake connection successful.")
+            conn.close()
+        else:
+            logging.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
+    except Exception as e:
+        logging.error(f"❌ Snowflake startup error: {e}")
+
 class QueryRequest(BaseModel):
     prompt: str
 
-@app.post("/query")
-async def query_sql(req: QueryRequest):
-    sql_query = generate_sql_query(req.prompt)
-    return {"sql": sql_query}
+
 
 @app.post("/data")
 async def get_data(req: QueryRequest):
-    sql_query = generate_sql_query(req.prompt)
-    print("Generated SQL:", sql_query)
+    sql_query = generate_sql_query({"prompt": req.prompt})
     if not sql_query:
-        return {"response": "❌ No SQL query was generated.", "data": [], "sql": ""}
+        return {"response": "❌ No SQL query generated.", "data": [], "sql": ""}
     result = execute_sql(sql_query)
-    print("Query Result:", result)
-    response_text = summarize_response(req.prompt, result)
-    return {"response": response_text, "data": result, "sql": sql_query}
+    response = summarize_response(req.prompt, result)
+    return {"response": response, "data": result, "sql": sql_query}
