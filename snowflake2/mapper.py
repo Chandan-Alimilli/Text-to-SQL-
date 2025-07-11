@@ -1,7 +1,8 @@
+
 import re
 from typing import Dict
 
-# 🔹 Manually defined schema from all 5 Excel screenshots
+# 🔹 Manually defined schema from all 5 Excel tables
 HARDCODED_SCHEMA = {
     "auto_fnce_orgn_refn_clse_fee": [
         "APPL_NB", "LOAN_BK_TS", "SNPST_DT", "SRC_SYS_CD", "LOAN_BK_ET_TS",
@@ -63,16 +64,31 @@ def generate_sql_query(prompt: str):
     elif not isinstance(prompt, str):
         return ""
 
+    keywords = extract_keywords(prompt)
+
+    # ✅ Shortcut: Direct match if full table name is mentioned in prompt
+    for table in HARDCODED_SCHEMA:
+        if table in prompt:
+            columns = HARDCODED_SCHEMA[table]
+            if not columns:
+                return "SELECT 'No columns available';"
+            return f"SELECT {', '.join(columns[:5])} FROM {table};"
+
+    # 🔹 Fallback: Keyword-based table matching
     table = match_table(prompt)
     if not table:
         return "SELECT 'No matching table found';"
 
-    keywords = extract_keywords(prompt)
     columns = HARDCODED_SCHEMA.get(table, [])
+    if not columns:
+        return "SELECT 'No columns available';"
+
     matched_columns = [col for col in columns if any(kw in col.lower() for kw in keywords)]
+    if not matched_columns:
+        matched_columns = columns[:5]  # Default to first 5 if no match
 
     if not matched_columns:
-        matched_columns = columns[:5]
+        return "SELECT 'No columns matched';"
 
     column_list = ', '.join(matched_columns)
     return f"SELECT {column_list} FROM {table};"
