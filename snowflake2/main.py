@@ -20,12 +20,12 @@ async def startup_event():
     try:
         conn = get_connection()
         if conn:
-            logging.info("✅ Snowflake connection successful.")
-            conn.close()
+            logging.info("✅ Snowflake connection established")
+            # ❌ DO NOT CLOSE the session here
         else:
-            logging.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
+            logging.warning("⚠️ Snowflake connection failed on startup")
     except Exception as e:
-        logging.error(f"❌ Snowflake startup error: {e}")
+        logging.error(f"❌ Startup error: {e}")
 
 class QueryRequest(BaseModel):
     prompt: str

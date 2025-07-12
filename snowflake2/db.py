@@ -1,56 +1,44 @@
-# db.py
-import os
 import logging
-import traceback
-from snowflake.snowpark import Session
-from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from db import get_connection, execute_sql
+from mapper import generate_sql_query, summarize_response
 
-load_dotenv()
+app = FastAPI()
 
-# ✅ Proxy config (required inside JPMorgan network)
-os.environ["HTTPS_PROXY"] = "http://proxy.jpmchase.net:10443"
-os.environ["HTTP_PROXY"] = os.environ["HTTPS_PROXY"]
-os.environ["NO_PROXY"] = "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.net,.eks.amazonaws.com"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# ✅ Snowflake Sandbox External Browser Auth Config
-SNOWFLAKE_CONFIG = {
-    "account": "ccpbawsuseast1vps.hassium.us-east-1.aws",
-    "user": "F745794",  # Change to your SID
-    "authenticator": "externalbrowser",
-    "role": "PROD_110575_SS_AUTO_DA_ADM_FR",
-    "warehouse": "PROD_110575_DA_AUTO_L_WH",
-    "database": "PROD_110575_SANDBOX_DB",
-    "schema": "SS_AUTO_DA"
-}
-
-session = None
-fallback_notice = ""
-
-def get_connection():
-    global session
+@app.on_event("startup")
+async def startup_event():
     try:
-        session = Session.builder.configs(SNOWFLAKE_CONFIG).create()
-        print("✅ Snowflake session established successfully.")
-        return session
+        conn = get_connection()
+        if conn:
+            logging.info("✅ Snowflake connection established")
+            # ❌ DO NOT CLOSE the session here
+        else:
+            logging.warning("⚠️ Snowflake connection failed on startup")
     except Exception as e:
-        global fallback_notice
-        fallback_notice = f"❌ Snowflake connection failed.\n🔍 Reason: {str(e)}"
-        print(fallback_notice)
-        print("🔧 Traceback:")
-        traceback.print_exc()
-        logging.warning("⚠️ Snowflake connection failed; fallback logic may be used.")
-        return None
+        logging.error(f"❌ Startup error: {e}")
 
-def execute_sql(query):
-    global session
-    if not session:
-        get_connection()
-    if not session:
-        return []
+class QueryRequest(BaseModel):
+    prompt: str
 
-    try:
-        df = session.sql(query).collect()
-        return [row.as_dict() for row in df]
-    except Exception as e:
-        print(f"❌ SQL Execution error: {e}")
-        return []
+@app.post("/data")
+async def get_data(req: QueryRequest):
+    print("📨 Prompt received:", req.prompt)
+    sql_query = generate_sql_query({"prompt": req.prompt})
+    print("🧠 SQL Query generated:", sql_query)
+
+    if not sql_query or not sql_query.strip().lower().startswith("select"):
+        return {"response": "❌ No SQL query generated.", "data": [], "sql": ""}
+
+    result = execute_sql(sql_query)
+    response = summarize_response(req.prompt, result)
+    return {"response": response, "data": result, "sql": sql_query}
