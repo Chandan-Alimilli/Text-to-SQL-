@@ -45,26 +45,12 @@
 //   });
 
 //   suggestions.forEach((s) => {
-//     s.addEventListener("click", () =>
-//       handleSuggestionClick(s.innerText.trim())
-//     );
+//     s.addEventListener("click", () => {
+//       const text = s.querySelector(".text")?.innerText.trim();
+//       handleSuggestionClick(text);
+//     });
 //   });
 // });
-
-// function handleSendMessage(e) {
-//   e.preventDefault();
-//   sendMessage();
-// }
-
-// function sendMessage() {
-//   const input = document.getElementById("user-input");
-//   const text = input.value.trim();
-//   if (!text) return;
-
-//   appendUserMessage(text);
-//   callBackend(text);
-//   input.value = "";
-// }
 
 // function appendUserMessage(text) {
 //   const chat = document.getElementById("chat-list");
@@ -81,13 +67,17 @@
 //   msg.className = "message bot";
 
 //   let html = `<div class="message-content">`;
-//   html += `<div class="sql-block">SQL: ${sqlQuery || "No SQL generated"}</div>`;
+//   html += `<div class="bot-heading">Data + Query</div>`;
+//   html += `<div class="sql-block"><strong>SQL Query:</strong><br>${
+//     sqlQuery || "No SQL generated"
+//   }</div>`;
 
 //   if (!dataArray || dataArray.length === 0) {
 //     html += `<div>No data found.</div>`;
 //   } else {
+//     html += `<div class="data-table-label"><strong>Data Table:</strong></div>`;
+//     html += `<div class="table-wrapper"><table class="response-table"><thead><tr>`;
 //     const headers = Object.keys(dataArray[0]);
-//     html += `<table class="response-table"><thead><tr>`;
 //     headers.forEach((h) => {
 //       html += `<th>${h}</th>`;
 //     });
@@ -99,7 +89,7 @@
 //       });
 //       html += `</tr>`;
 //     });
-//     html += `</tbody></table>`;
+//     html += `</tbody></table></div>`;
 //   }
 
 //   html += `</div>`;
@@ -187,7 +177,7 @@ function appendUserMessage(text) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-function appendBotMessage(sqlQuery, dataArray) {
+function appendBotMessage(sqlQuery, summary, dataArray) {
   const chat = document.getElementById("chat-list");
   const msg = document.createElement("div");
   msg.className = "message bot";
@@ -197,6 +187,10 @@ function appendBotMessage(sqlQuery, dataArray) {
   html += `<div class="sql-block"><strong>SQL Query:</strong><br>${
     sqlQuery || "No SQL generated"
   }</div>`;
+
+  if (summary) {
+    html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
+  }
 
   if (!dataArray || dataArray.length === 0) {
     html += `<div>No data found.</div>`;
@@ -231,10 +225,17 @@ async function callBackend(prompt) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
+
     const json = await res.json();
-    appendBotMessage(json.sql, json.response || []);
+
+    const sql = json.sql || "No SQL generated";
+    const summary = json.response || "No summary";
+    const data = json.data || [];
+
+    appendBotMessage(sql, summary, data);
   } catch (err) {
-    appendBotMessage("", [
+    console.error("Backend Error:", err);
+    appendBotMessage("", "", [
       { error: "❌ Could not connect to backend or invalid response." },
     ]);
   }
