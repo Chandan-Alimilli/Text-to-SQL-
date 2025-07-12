@@ -14,14 +14,15 @@ os.environ["NO_PROXY"] = "localhost,127.0.0.1,.jpmchase.net,.jpmorganchase.net,.
 # ✅ Snowflake connection config
 SNOWFLAKE_CONFIG = {
     "account": "ccpbawsuseast1vps.hassium.us-east-1.aws",
-    "user": "F745794",
+    "user": "F745794",  # your SID
     "authenticator": "externalbrowser",
-    "role": "PROD_110776_ANL_QRY_FR",
+    "role": "PROD_110575_DA_AUTO_WH_FR",
     "warehouse": "PROD_110575_DA_AUTO_L_WH",
     "database": "PROD_110575_ICDW_DB",
     "schema": "AUTO_V"
 }
 
+# ✅ Global shared session
 session = None
 fallback_notice = ""
 
@@ -41,15 +42,22 @@ def get_connection():
 def execute_sql(query):
     global session
     try:
-        # 🔄 Reconnect if session is missing or closed
-        if not session or session._conn._session._conn.is_closed():
-            print("⚠️ Session closed or not found. Reconnecting...")
+        # Step 1: Create session if missing
+        if not session:
+            session = get_connection()
+
+        # Step 2: Check if session is still valid using a safe "SELECT 1"
+        try:
+            session.sql("SELECT 1").collect()
+        except Exception:
+            print("⚠️ Session inactive or expired. Reconnecting...")
             session = get_connection()
 
         if not session:
-            print("❌ No active Snowflake session.")
+            print("❌ Still no active session after reconnect.")
             return []
 
+        # Step 3: Run your actual query
         df = session.sql(query).collect()
         return [row.as_dict() for row in df]
 
