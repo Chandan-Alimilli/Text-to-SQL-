@@ -1,4 +1,3 @@
-
 import re
 from typing import Dict
 
@@ -55,7 +54,9 @@ def match_table(prompt: str):
         score = sum(any(kw in col.lower() for col in columns) for kw in keywords)
         table_scores[table] = score
 
-    return max(table_scores, key=table_scores.get) if table_scores else None
+    best_table = max(table_scores, key=table_scores.get) if table_scores else None
+    print("📊 Best matched table:", best_table)
+    return best_table
 
 # 🔹 Build the SQL query
 def generate_sql_query(prompt: str):
@@ -64,9 +65,9 @@ def generate_sql_query(prompt: str):
     elif not isinstance(prompt, str):
         return ""
 
+    print("🔍 Extracting keywords from:", prompt)
     keywords = extract_keywords(prompt)
 
-    # ✅ Shortcut: Direct match if full table name is mentioned in prompt
     for table in HARDCODED_SCHEMA:
         if table in prompt:
             columns = HARDCODED_SCHEMA[table]
@@ -74,7 +75,6 @@ def generate_sql_query(prompt: str):
                 return "SELECT 'No columns available';"
             return f"SELECT {', '.join(columns[:5])} FROM {table};"
 
-    # 🔹 Fallback: Keyword-based table matching
     table = match_table(prompt)
     if not table:
         return "SELECT 'No matching table found';"
@@ -85,7 +85,7 @@ def generate_sql_query(prompt: str):
 
     matched_columns = [col for col in columns if any(kw in col.lower() for kw in keywords)]
     if not matched_columns:
-        matched_columns = columns[:5]  # Default to first 5 if no match
+        matched_columns = columns[:5]
 
     if not matched_columns:
         return "SELECT 'No columns matched';"

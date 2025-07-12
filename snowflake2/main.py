@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from db import get_connection, execute_sql
-
 from mapper import generate_sql_query, summarize_response
 
 app = FastAPI()
@@ -31,13 +30,15 @@ async def startup_event():
 class QueryRequest(BaseModel):
     prompt: str
 
-
-
 @app.post("/data")
 async def get_data(req: QueryRequest):
+    print("📨 Prompt received:", req.prompt)
     sql_query = generate_sql_query({"prompt": req.prompt})
-    if not sql_query:
+    print("🧠 SQL Query generated:", sql_query)
+
+    if not sql_query or not sql_query.strip().lower().startswith("select"):
         return {"response": "❌ No SQL query generated.", "data": [], "sql": ""}
+
     result = execute_sql(sql_query)
     response = summarize_response(req.prompt, result)
     return {"response": response, "data": result, "sql": sql_query}
