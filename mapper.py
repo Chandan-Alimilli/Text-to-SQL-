@@ -23,9 +23,6 @@ HARDCODED_SCHEMA = {
     "auto_fnce_orgn_refn_clse": [
         "APPL_NB", "CLSE_TASK_STG_TX", "CLSE_TASK_STG_STS_TX", "CLSE_TASK_CRE_TS",
         "SNPST_DT", "SRC_SYS_CD", "CLSE_TASK_CRE_ET_TS", "UPDT_USR_ID", "EFF_DT", "ETL_TS"
-    ],
-    "auto_fnce_fbs_dcsn": [
-        "PQUAL_STS_CD", "RCRD_CRE_ET_TS", "PQUAL_DCSN_ASES_BY_CD", "APPL_NB", "BK_DT"
     ]
 }
 

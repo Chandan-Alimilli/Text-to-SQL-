@@ -17,9 +17,9 @@
   --primary-color: #242424;
   --secondary-color: #383838;
   --secondary-hover-color: #444;
-  --card-color : #2d2d2d;
+  --card-color : #1d1f21;
   --text-card: #ffffff;
-  --end :#5e6365
+  --end :#3a3b3c
 }
 
  .light_mode {
@@ -49,11 +49,11 @@ body {
 .nav{
   display: flex ;
   justify-content:space-between; 
-  padding: 20px 40px;
+  padding: 10px 40px;
 }
 
 .nav-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
   background-clip: text;
   background: linear-gradient(to right, #4294f1, #0d19f8);
   -webkit-background-clip: text;
@@ -63,7 +63,7 @@ body {
 }
 
 .header {
-  margin-top: 6vh;
+
   padding: 1rem;
   overflow-x: hidden;
   justify-content: center;
@@ -74,25 +74,18 @@ body.hide-header .header {
   display: none;
 }
 
-.header .title,
+
 .header .subtitle {
   color: var(--text-color);
   font-weight: 500;
   line-height: 4rem;
 }
 
-.header .title {
-  font-size: 3rem;
-  background-clip: text;
-  background: linear-gradient(to right, #0775f3, #000000);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 
 .header .subtitle {
-  font-size: 2rem;
+  font-size:25px;
    background-clip: text;
-  background: linear-gradient(to right, #0775f3, #030bac);
+  background: linear-gradient(to right, #5ca5f8, #0511fd);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -109,15 +102,18 @@ body.hide-header .header {
 }
 
 .suggestion-list .suggestion {
-  width: 190px;
-  padding: 1.25rem;
+  width: 300px;
+  /* height: 200px; */
+  padding: 1rem;
   flex-shrink: 0;
+  font-size: 1rem;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
   border-radius: 0.75rem;
   background: linear-gradient(to right, var(--card-color) , var(--end));
+
   transition: 0.2s ease;
   cursor: pointer;
 }
@@ -133,10 +129,10 @@ body.hide-header .header {
 }
 
 .suggestion-list .suggestion .icon {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   font-size: 1.3rem;
-  margin-top: 1.5rem;
+  margin-top: .5rem;
    background: linear-gradient(to right, #0775f3, #02053b);
    color: #fff;
   border-radius: 50%;
@@ -490,6 +486,8 @@ body.hide-header .header {
   border-collapse: collapse;
   margin-top: 10px;
   overflow-x: auto;
+   scroll-snap-type: x mandatory;
+  scrollbar-width: none;
 }
 
 .response-table th,
@@ -522,9 +520,48 @@ body.hide-header .header {
 }
 
 
-.logo {
-  width: 200px;
-height: 50px;
-  display: inline-block;
-  vertical-align: middle;
+
+.filter-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  justify-content: center;
+}
+
+.filter-card {
+  background:linear-gradient(to right, var(--card-color) , var(--end));
+  border-radius: 12px;
+  padding: 1rem;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-color);
+  font-family: Poppins, sans-serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.filter-card input {
+  margin-top: 0.5rem;
+  padding: 0.4rem;
+  border-radius: 6px;
+  border: 1px solid #ccc; 
+  color: var(--text-primary);
+  background:linear-gradient(to right, #0775f3, #02053b);
+}
+
+
+.download-btn {
+  margin-top: 15px;
+  margin-right: 20px;
+  padding: 6px 12px;
+  background: linear-gradient(to right, #0775f3, #02053b);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.download-btn:hover {
+  background-color:linear-gradient(to right, #5da6f9, #1d28f8);
 }
