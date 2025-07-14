@@ -1,90 +1,59 @@
 import re
+import spacy
+from datetime import datetime
+from dateutil import parser
+from rag_retriever import schema_metadata
 
-# ✅ Qualified Snowflake path
-DB = "PROD_110575_ICDW_DB"
-SCHEMA = "AUTO_V"
-TABLE_PREFIX = f"{DB}.{SCHEMA}"
+nlp = spacy.load("en_core_web_sm")
 
-# ✅ Table → Column mapping (quoted case-sensitive names)
-HARDCODED_SCHEMA = {
-    "afnc_dsi_orgn_acct_dy": [
-        "APPL_NB", "BK_IN", "APPL_APRV_IN"
-    ],
-    "auto_fnce_orgn_dim": [
-        "APPL_NB", "DGTL_REL_CD"
-    ],
-    "auto_fnce_fbs_dcsn": [
-        "PQUAL_STS_CD", "RCRD_CRE_ET_TS", "PQUAL_DCSN_ASES_BY_CD"
-    ],
-    "afnc_orgn_dim_dy": [
-        "ACTN1_DESC_TX", "ORGN_PRTL_TYPE_CD"
-    ],
-    "auto_fnce_orgn_refn_elig": [
-        "MEMB_ID", "ACCT_NB", "SRC_SYS_CD"
-    ]
-}
+def extract_entities(prompt):
+    doc = nlp(prompt)
+    fields = [chunk.text.lower() for chunk in doc.noun_chunks]
+    return fields
 
-# ✅ Optional table-specific WHERE conditions
-WHERE_CONDITIONS = {
-    "afnc_dsi_orgn_acct_dy": f"""WHERE "APPL_NB" IN (
-    SELECT DISTINCT "APPL_NB"
-    FROM {TABLE_PREFIX}.auto_fnce_orgn_dim
-    WHERE UPPER("DGTL_REL_CD") IN (UPPER('58235a8f-7ee9-44f2-9c9f-4adfa53124bb'))
-)""",
-    "afnc_orgn_dim_dy": """WHERE "ACTN1_DESC_TX" IS NOT NULL AND "ORGN_PRTL_TYPE_CD" = 'D2D'""",
-    "auto_fnce_fbs_dcsn": """WHERE "PQUAL_DCSN_ASES_BY_CD" = 'AEGIS'"""
-}
+def parse_date_range(from_date, to_date):
+    try:
+        from_dt = parser.parse(from_date).strftime("%Y-%m-%d") if from_date else None
+        to_dt = parser.parse(to_date).strftime("%Y-%m-%d") if to_date else None
+        return from_dt, to_dt
+    except Exception:
+        return None, None
 
-# 🔍 Extract keywords from prompt
-def extract_keywords(prompt: str):
-    prompt = re.sub(r"[^\w\s]", " ", prompt.lower())
-    return prompt.split()
+def generate_sql_query(prompt, matched_table, from_date=None, to_date=None, limit=25):
+    if isinstance(matched_table, str):
+        table_name = matched_table
+        metadata = schema_metadata.get(table_name, {})
+    elif isinstance(matched_table, dict):
+        table_name = list(matched_table.keys())[0]
+        metadata = matched_table[table_name]
+    else:
+        raise Exception("Invalid matched_table structure.")
 
-# 🧠 Find best matching table
-def match_table(prompt: str):
-    keywords = extract_keywords(prompt)
-    table_scores = {}
-    for table, cols in HARDCODED_SCHEMA.items():
-        score = sum(any(kw in col.lower() for col in cols) for kw in keywords)
-        table_scores[table] = score
-    return max(table_scores, key=table_scores.get) if table_scores else None
+    fields = extract_entities(prompt)
+    selected_cols = []
 
-# 🔧 Build query logic
-def generate_sql_query(prompt: str):
-    if isinstance(prompt, dict):
-        prompt = prompt.get("prompt", "")
-    elif not isinstance(prompt, str):
-        return ""
+    for col, desc in metadata.get("columns", {}).items():
+        for f in fields:
+            if f in desc.lower() or f in col.lower():
+                selected_cols.append(col)
+                break
 
-    print("🧠 Prompt:", prompt)
-    keywords = extract_keywords(prompt)
+    if not selected_cols:
+        selected_cols = list(metadata.get("columns", {}).keys())[:5]
 
-    for table in HARDCODED_SCHEMA:
-        if table in prompt:
-            return build_query(table, keywords)
+    query = f"SELECT {', '.join(selected_cols)} FROM {table_name}"
 
-    table = match_table(prompt)
-    if table:
-        return build_query(table, keywords)
+    date_columns = [col for col in metadata.get("columns", {}) if "date" in col.lower() or col.endswith("_DT")]
+    if from_date or to_date:
+        from_dt, to_dt = parse_date_range(from_date, to_date)
+        if date_columns:
+            date_col = date_columns[0]
+            conditions = []
+            if from_dt:
+                conditions.append(f"{date_col} >= '{from_dt}'")
+            if to_dt:
+                conditions.append(f"{date_col} <= '{to_dt}'")
+            query += " WHERE " + " AND ".join(conditions)
 
-    return "SELECT 'No matching table found';"
-
-# 🏗️ Construct the SQL query
-def build_query(table: str, keywords: list):
-    columns = HARDCODED_SCHEMA.get(table, [])
-    matched_cols = [col for col in columns if any(kw in col.lower() for kw in keywords)]
-    if not matched_cols:
-        matched_cols = columns[:5]
-
-    # ✅ Safely quote column names
-    column_list = ", ".join(f'"{col}"' for col in matched_cols)
-    where_clause = WHERE_CONDITIONS.get(table.lower(), "")
-    return f"""SELECT {column_list}
-FROM {TABLE_PREFIX}.{table} ds
-{where_clause}"""
-
-# 📊 Response summary
-def summarize_response(prompt: str, result: list):
-    if not result:
-        return "No records found."
-    return f"Found {len(result)} results matching your request."
+    query += f" LIMIT {int(limit)}"
+    return query
