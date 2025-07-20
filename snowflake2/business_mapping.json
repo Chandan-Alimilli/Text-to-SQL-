@@ -1,0 +1,43 @@
+{
+  "approved": {
+    "table": "afnc_dsi_orgn_acct_dy",
+    "column": "APPL_APRV_IN",
+    "value": 1
+  },
+  "rejected": {
+    "table": "afnc_dsi_orgn_acct_dy",
+    "column": "APPL_APRV_IN",
+    "value": 0
+  },
+  "eligible": {
+    "table": "auto_fnce_orgn_refn_elg",
+    "column": "REFN_EL_IN",
+    "value": 1
+  },
+  "non-eligible": {
+    "table": "auto_fnce_orgn_refn_elg",
+    "column": "REFN_EL_IN",
+    "value": 0
+  },
+  "booked": {
+    "table": "auto_fnce_orgn_refn_clse_fee",
+    "column": "LOAN_BK_TS",
+    "not_null": true
+  },
+ "declined": {
+  "table": "auto_fnce_orgn_refn_clse_fee",
+  "column": "LOAN_BK_TS",
+  "is_null": true
+}
+,
+  "closed": {
+    "table": "auto_fnce_orgn_refn_clse",
+    "column": "CLSE_TASK_STG_STS_TX",
+    "value": "Complete"
+  },
+  "pending": {
+    "table": "auto_fnce_orgn_refn_clse",
+    "column": "CLSE_TASK_STG_STS_TX",
+    "value": "Pending"
+  }
+}

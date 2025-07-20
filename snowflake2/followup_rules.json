@@ -1,0 +1,49 @@
+{
+  "followup_keywords": [
+    "those",
+    "them",
+    "from above",
+    "from earlier",
+    "can you show",
+    "list them",
+    "show records",
+    "refine",
+    "just those",
+    "include only",
+    "give details",
+    "filter those",
+    "based on previous",
+    "what about",
+    "more info",
+    "further",
+    "show me those",
+    "from the above"
+  ],
+  "transforms": {
+    "count_to_detail": {
+      "trigger_patterns": [
+        "how many",
+        "count",
+        "number of"
+      ],
+      "replacement": {
+        "regex": "SELECT\\s+COUNT\\(\\*\\)(\\s+AS\\s+\\w+)?",
+        "replace_with": "SELECT *"
+      }
+    }
+  },
+  "month_filters": {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12
+  }
+}

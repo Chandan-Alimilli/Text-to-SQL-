@@ -1,5 +1,5 @@
 {
-  "auto_fnce_orgn_refn_elig": {
+  "auto_fnce_orgn_refn_elg": {
     "description": "refinance eligibility information",
     "columns": {
       "REFN_ELG_SYS_ID": "refinance eligibility system id",

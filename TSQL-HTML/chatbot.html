@@ -15,51 +15,16 @@
 
   <div class="nav">
     <img src="https://1000logos.net/wp-content/uploads/2021/05/Chase-logo.png" alt="Chase Logo" height="80">
-    <h2 class="nav-title">Text To SQL</h2>
+    <h2 class="nav-title">Talk To Auto Data</h2>
   </div>
 
   <header class="header">
     <p class="subtitle">From question to query — turn natural language into real SQL insights</p>
 
-    <ul class="suggestion-list">
-  <!-- ✅ Prompt Set 1: auto_fnce_orgn_refn_elig -->
-  <li class="suggestion"><h4 class="text">Show me all refinance eligibility system IDs and customer IDs.</h4><span class="icon material-symbols-rounded">account_balance</span></li>
-  <li class="suggestion"><h4 class="text">Display vehicle registration number, snapshot date, and request ID.</h4><span class="icon material-symbols-rounded">directions_car</span></li>
-  <li class="suggestion"><h4 class="text">List member ID, industry class code, and source system code.</h4><span class="icon material-symbols-rounded">badge</span></li>
-  <li class="suggestion"><h4 class="text">Give me entries with state code and state allowed flag.</h4><span class="icon material-symbols-rounded">flag</span></li>
-  <li class="suggestion"><h4 class="text">What are the snapshot dates and request IDs for refinance applications?</h4><span class="icon material-symbols-rounded">today</span></li>
-
-  <!-- ✅ Prompt Set 2: afnc_dsi_orgn_acct_dy -->
-  <li class="suggestion"><h4 class="text">List account number, application number, and application initiation date.</h4><span class="icon material-symbols-rounded">numbers</span></li>
-  <li class="suggestion"><h4 class="text">Show me account start date and source system code.</h4><span class="icon material-symbols-rounded">schedule</span></li>
-  <li class="suggestion"><h4 class="text">Get member ID, request ID, and update user ID.</h4><span class="icon material-symbols-rounded">person</span></li>
-  <li class="suggestion"><h4 class="text">Provide entity customer ID and snapshot date details.</h4><span class="icon material-symbols-rounded">calendar_month</span></li>
-  <li class="suggestion"><h4 class="text">Show all account day entries with effective dates.</h4><span class="icon material-symbols-rounded">event_note</span></li>
-
-  <!-- ✅ Prompt Set 3: auto_fnce_orgn_refn_clse_fee -->
-  <li class="suggestion"><h4 class="text">List application number, vehicle fee amount, and effective date.</h4><span class="icon material-symbols-rounded">request_quote</span></li>
-  <li class="suggestion"><h4 class="text">Show all entries with snapshot date and tax amount.</h4><span class="icon material-symbols-rounded">receipt_long</span></li>
-  <li class="suggestion"><h4 class="text">Display member ID and update user ID.</h4><span class="icon material-symbols-rounded">supervisor_account</span></li>
-  <li class="suggestion"><h4 class="text">Give me entries that contain rebate amount and application number.</h4><span class="icon material-symbols-rounded">payments</span></li>
-  <li class="suggestion"><h4 class="text">What are the closure fees and the tax for each refinance?</h4><span class="icon material-symbols-rounded">calculate</span></li>
-
-  <!-- ✅ Prompt Set 4: auto_fnce_orgn_refn_clse -->
-  <li class="suggestion"><h4 class="text">Get application number, update user ID, and snapshot date.</h4><span class="icon material-symbols-rounded">file_copy</span></li>
-  <li class="suggestion"><h4 class="text">List effective date and application initiation date.</h4><span class="icon material-symbols-rounded">event</span></li>
-  <li class="suggestion"><h4 class="text">Show request ID and tax rebate eligibility flag.</h4><span class="icon material-symbols-rounded">check_circle</span></li>
-  <li class="suggestion"><h4 class="text">Provide member ID and account number for closing data.</h4><span class="icon material-symbols-rounded">lock</span></li>
-  <li class="suggestion"><h4 class="text">What are the final snapshot and update dates?</h4><span class="icon material-symbols-rounded">calendar_today</span></li>
-
-  <!-- 🔀 Prompt Set 5: Cross-Table Join -->
-  <li class="suggestion"><h4 class="text">Show application numbers and snapshot dates from all refinance-related tables.</h4><span class="icon material-symbols-rounded">dynamic_form</span></li>
-  <li class="suggestion"><h4 class="text">List refinance eligibility details with account numbers and their vehicle fee amount.</h4><span class="icon material-symbols-rounded">view_list</span></li>
-  <li class="suggestion"><h4 class="text">For each request ID, show vehicle registration number and any fee or rebate linked to it.</h4><span class="icon material-symbols-rounded">sync_alt</span></li>
-  <li class="suggestion"><h4 class="text">Give me application number, request ID, and tax amount across all tables.</h4><span class="icon material-symbols-rounded">paid</span></li>
-  <li class="suggestion"><h4 class="text">Which customers are eligible for refinance and what are their closing dates and fee amounts?</h4><span class="icon material-symbols-rounded">how_to_reg</span></li>
-</ul>
 
 
-    <div class="filter-cards">
+
+    <!-- <div class="filter-cards">
       <div class="filter-card">
         <label for="from-date">From Date</label>
         <input type="month" id="from-date" />
@@ -72,7 +37,7 @@
         <label for="record-limit">Record Limit</label>
         <input type="number" id="record-limit" min="1" placeholder="Optional" />
       </div>
-    </div>
+    </div> -->
   </header>
 
   <div class="chat-list" id="chat-list"></div>
@@ -88,7 +53,7 @@
         <span id="mic-button" class="mic material-symbols-rounded">mic</span>
       </div>
     </form>
-    <p class="disclaimer-text">This is a Text TO SQL front-end demo</p>
+    <p class="disclaimer-text"> POC  -  Talk To Auto Data</p>
   </div>
 
   <script src="chatbot.js"></script>
