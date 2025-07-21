@@ -27,6 +27,7 @@
       "APRV_LOAN_PYMT_AM": "approved payment amount",
       "APRV_PYMT_AM": "approved payment",
       "APPL_TERM_MO_CN": "term in months"
+      
     }
   },
   "auto_fnce_orgn_refn_clse_fee": {
@@ -42,7 +43,8 @@
       "ORGN_LOAN_PYF_AM": "original loan payoff amount",
       "ADDL_FEE_AM": "additional fee",
       "EFF_DT": "effective date",
-      "ETL_TS": "ETL timestamp"
+      "ETL_TS": "ETL timestamp",
+      "BK_IN" : "booked flag"
     }
   },
   "auto_fnce_orgn_refn_clse": {
