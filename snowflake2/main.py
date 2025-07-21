@@ -1,49 +1,4 @@
-# from fastapi import FastAPI, Request
-# from fastapi.middleware.cors import CORSMiddleware
-# from mapper import generate_sql_query
-# from rag_retriever import retrieve_relevant_table, schema_metadata  # 👈 also import schema_metadata
-# from db import execute_sql  # assuming this is your DB call
-# import logging
 
-# app = FastAPI()
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger("main")
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# @app.post("/data")
-# async def get_data(request: Request):
-#     body = await request.json()
-#     prompt = body.get("prompt")
-
-#     logger.info(f"📨 Prompt received: {prompt}")
-
-#     rag_data = retrieve_relevant_table(prompt)
-#     logger.info(f"📥 RAG Matches: {rag_data}")
-
-#     try:
-#         matched_table = list(rag_data.keys())[0]
-#         matched_metadata = rag_data.get(matched_table)
-
-#         if not matched_metadata or not isinstance(matched_metadata, dict):
-#             raise ValueError("Invalid matched_metadata: None or not a dictionary")
-
-#         # ✅ Pass all required arguments
-#         sql = generate_sql_query(prompt, matched_table, matched_metadata, rag_data, schema_metadata)
-#         logger.info(f"🧠 SQL Query generated: {sql}")
-
-#         result = execute_sql(sql)
-#         return {"response": "✅ Query executed successfully.", "data": result, "sql": sql}
-
-#     except Exception as e:
-#         logger.error(f"❌ Failed to generate SQL: {e}")
-#         return {"response": f"❌ Failed to generate SQL: {str(e)}"}
 
 
 

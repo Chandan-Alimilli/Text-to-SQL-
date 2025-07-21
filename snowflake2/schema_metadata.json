@@ -11,6 +11,7 @@
       "VHCL_RGST_NB": "vehicle registration number",
       "STATE_ALOW_IN": "state allowed flag",
       "INDS_CLS_CD": "industry class code",
+      "REFN_EL_IN": "eligibility flag",
       "MEMB_ID": "member ID"
     }
   },
@@ -24,9 +25,7 @@
       "APPL_NB": "application number",
       "APRV_LOAN_AM": "approved loan amount",
       "APRV_LOAN_PYMT_AM": "approved payment amount",
-      "APRV_PYMT_AM": "approved payment",
-      "APPL_TERM_MO_CN": "term in months"
-      
+      "APRV_PYMT_AM": "approved payment"
     }
   },
   "auto_fnce_orgn_refn_clse_fee": {
