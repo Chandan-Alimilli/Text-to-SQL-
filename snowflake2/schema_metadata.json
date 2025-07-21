@@ -19,7 +19,6 @@
     "columns": {
       "ACCT_NB": "account number",
       "APPL_APRV_IN": "application approved flag",
-      "APPL_ELGC_CNTRT_IN": "eligible contract flag",
       "APPL_INIT_DT": "application initiation date",
       "APPL_INIT_TS": "application initiation timestamp",
       "APPL_NB": "application number",
