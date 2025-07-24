@@ -20,14 +20,14 @@
     "value": 0
   },
   "booked": {
-    "table": "auto_fnce_orgn_refn_clse_fee",
-    "column": "LOAN_BK_TS",
-    "not_null": true
+    "table": "afnc_dsi_orgn_acct_dy",
+    "column": "BK_IN",
+    "value": 1
   },
  "declined": {
-  "table": "auto_fnce_orgn_refn_clse_fee",
-  "column": "LOAN_BK_TS",
-  "is_null": true
+  "table": "afnc_dsi_orgn_acct_dy",
+  "column": "BK_in",
+  "value": 0
 }
 ,
   "closed": {

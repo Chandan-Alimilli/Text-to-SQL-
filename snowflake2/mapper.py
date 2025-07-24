@@ -1,301 +1,209 @@
 import re
 import json
 import spacy
-import dateparser
+import os
 from datetime import datetime
 from dateutil import parser
-# from rag_retriever import schema_metadata
-# from prompt_utils import extract_limit_from_prompt
-# from mapper_utils import extract_direct_column_filters
+import logging
+
 from mapper_utils import (
-    extract_comparative_filters,
-    extract_direct_column_filters,
     extract_entities,
-    parse_date_range_from_prompt
+    extract_direct_column_filters,
+    extract_comparative_filters,
+    parse_date_range_from_prompt,
+    normalize_text
 )
 from prompt_utils import extract_limit_from_prompt
 from rag_retriever import schema_metadata
+from aggregation_handler import detect_aggregation, build_aggregation_query, is_percentage_prompt
+from followup_handler import is_follow_up_prompt
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 nlp = spacy.load("en_core_web_sm")
 
-# ✅ Load business mappings
-with open("business_mapping.json", "r") as f:
-    BUSINESS_TERMS = json.load(f)
+# Load business_mapping.json
+business_terms_path = "data/business_mapping.json"
+business_terms = {}
+if os.path.exists(business_terms_path):
+    try:
+        with open(business_terms_path, "r") as f:
+            business_content = f.read().strip()
+            if business_content:
+                business_terms = json.loads(business_content)
+                logger.debug("Successfully loaded business_mapping.json")
+                logger.debug(f"Business terms keys: {list(business_terms.keys())}")
+            else:
+                logger.error("business_mapping.json is empty")
+    except Exception as e:
+        logger.error(f"Error loading business_mapping.json: {str(e)}")
+else:
+    logger.error(f"Business mapping file not found: {business_terms_path}")
 
-# ✅ Extract noun phrases
-def extract_entities(prompt):
-    doc = nlp(prompt)
-    return [chunk.text.lower() for chunk in doc.noun_chunks]
-
-# ✅ Date range parser from prompt
-def parse_date_range_from_prompt(prompt: str):
-    prompt = prompt.lower()
-    from_dt, to_dt = None, None
-
-    date_matches = re.findall(r"\d{4}-\d{2}-\d{1,2}", prompt)
-    if len(date_matches) == 1:
-        from_dt = to_dt = parser.parse(date_matches[0]).strftime("%Y-%m-%d")
-    elif len(date_matches) >= 2:
-        from_dt = parser.parse(date_matches[0]).strftime("%Y-%m-%d")
-        to_dt = parser.parse(date_matches[1]).strftime("%Y-%m-%d")
-    elif any(k in prompt for k in ["last", "this", "next", "month", "week", "year", "today", "yesterday"]):
-        parsed = dateparser.parse(prompt)
-        if parsed:
-            from_dt = to_dt = parsed.strftime("%Y-%m-%d")
-
-    months = [
-        "january", "february", "march", "april", "may", "june",
-        "july", "august", "september", "october", "november", "december"
-    ]
-    for i, m in enumerate(months):
-        if f"in {m}" in prompt or f"month of {m}" in prompt:
-            year = datetime.now().year
-            from_dt = f"{year}-{i+1:02d}-01"
-            to_dt = f"{year}-{i+1:02d}-28"
-        elif f"from {m}" in prompt:
-            from_dt = f"{datetime.now().year}-{i+1:02d}-01"
-        elif f"to {m}" in prompt:
-            to_dt = f"{datetime.now().year}-{i+1:02d}-28"
-
-    return from_dt, to_dt
-
-# ✅ Extract comparative filters from prompt (NEW)
-def extract_comparative_filters(prompt: str, metadata_columns: dict) -> list:
-    filters = []
+def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_data=None, schema_metadata=schema_metadata, from_date=None, to_date=None, limit=None, memory_context=None):
+    """Generate SQL query from prompt, prioritizing business term mappings."""
     prompt_lower = prompt.lower()
+    logger.debug(f"Generating SQL for prompt: {prompt_lower}")
+    logger.debug(f"Prompt lower: {prompt_lower}")
 
-    comparison_ops = {
-        "less than or equal to": "<=",
-        "greater than or equal to": ">=",
-        "less than": "<",
-        "more than": ">",
-        "greater than": ">",
-        "equal to": "=",
-        "equals": "=",
-        "=": "=",
-        ">": ">",
-        "<": "<",
-        ">=": ">=",
-        "<=": "<="
-    }
-
-    for col, desc in metadata_columns.items():
-        col_lower = col.lower()
-        desc_lower = desc.lower()
-
-        for phrase, symbol in comparison_ops.items():
-            # Match variants like: "term in months less than 30"
-            pattern = rf"(?:{desc_lower}|{col_lower})\s+{phrase}\s+([a-zA-Z0-9\-'.]+)"
-            match = re.search(pattern, prompt_lower)
-            if match:
-                value = match.group(1)
-                value = f"'{value}'" if not value.replace('.', '').isdigit() else value
-                filters.append(f"{col.upper()} {symbol} {value}")
-
-    return filters
-
-# ✅ Main SQL query builder
-# def generate_sql_query(prompt, matched_table, matched_metadata, rag_data, schema_metadata, from_date=None, to_date=None, limit=None):
-#     if isinstance(matched_table, str):
-#         table_name = matched_table
-#         metadata = schema_metadata.get(table_name, {})
-#     elif isinstance(matched_table, dict):
-#         table_name = list(matched_table.keys())[0]
-#         metadata = matched_table[table_name]
-#     else:
-#         raise Exception("Invalid matched_table structure.")
-
-#     table_name_upper = table_name.upper()
-#     prompt_lower = prompt.lower()
-#     fields = extract_entities(prompt)
-#     selected_cols = []
-#     where_clauses = []
-
-#     # ✅ Business indicator conditions
-#     for key, rule in BUSINESS_TERMS.items():
-#         if key in prompt_lower and rule["table"].lower() == table_name.lower():
-#             col = rule["column"].upper()
-#             if rule.get("not_null"):
-#                 where_clauses.append(f"{col} IS NOT NULL")
-#             elif rule.get("is_null"):
-#                 where_clauses.append(f"{col} IS NULL")
-#             elif "value" in rule:
-#                 val = rule["value"]
-#                 val = f"'{val}'" if isinstance(val, str) else val
-#                 where_clauses.append(f"{col} = {val}")
-
-#     # ✅ Detect count prompt
-#     is_count = any(word in prompt_lower for word in ["how many", "count", "number of"])
-
-#     # ✅ Extract mentioned columns
-#     user_specified = False
-#     mentioned_indicator = any(key in prompt_lower for key in BUSINESS_TERMS)
-#     for col, desc in metadata.get("columns", {}).items():
-#         col_upper = col.upper()
-#         for f in fields:
-#             if f in desc.lower() or f in col.lower():
-#                 selected_cols.append(col_upper)
-#                 user_specified = True
-#                 break
-
-#     if not user_specified or mentioned_indicator:
-#         selected_cols = [col.upper() for col in metadata.get("columns", {}).keys()]
-
-#     # ✅ SELECT clause
-#     if is_count:
-#         query = f"SELECT COUNT(*) AS TOTAL FROM {table_name_upper}"
-#     else:
-#         query = f"SELECT {', '.join(selected_cols)} FROM {table_name_upper}"
-
-#     # ✅ Add date filters
-#     inferred_from, inferred_to = parse_date_range_from_prompt(prompt)
-#     from_dt = parser.parse(from_date).strftime("%Y-%m-%d") if from_date else inferred_from
-#     to_dt = parser.parse(to_date).strftime("%Y-%m-%d") if to_date else inferred_to
-
-#     date_columns = [
-#         col.upper() for col in metadata.get("columns", {})
-#         if col.lower().endswith("_dt") or "date" in col.lower()
-#     ]
-#     if not date_columns:
-#         date_columns = [
-#             col.upper() for col in metadata.get("columns", {})
-#             if col.lower().endswith("_ts") or "timestamp" in col.lower()
-#         ]
-
-#     if (from_dt or to_dt) and date_columns:
-#         date_col = date_columns[0]
-#         if from_dt:
-#             where_clauses.append(f"{date_col} >= '{from_dt}'")
-#         if to_dt:
-#             where_clauses.append(f"{date_col} <= '{to_dt}'")
-#         if not is_count and date_col not in selected_cols:
-#             selected_cols.append(date_col)
-
-#     # ✅ Add additional filter conditions (NEW)
-#     comparative_filters = extract_comparative_filters(prompt, metadata.get("columns", {}))
-#     if comparative_filters:
-#         where_clauses.extend(comparative_filters)
-
-#     # ✅ WHERE clause
-#     if where_clauses:
-#         query += " WHERE " + " AND ".join(where_clauses)
-
-#     # ✅ Final LIMIT clause
-#     if not is_count:
-#         final_limit = extract_limit_from_prompt(prompt, default_limit=50)
-#         query += f" LIMIT {final_limit}"
-
-#     return query
-
-
-
-
-
-
-
-
-
-
-def generate_sql_query(prompt, matched_table, matched_metadata, rag_data, schema_metadata, from_date=None, to_date=None, limit=None):
-    if isinstance(matched_table, str):
-        table_name = matched_table
-        metadata = schema_metadata.get(table_name, {})
-    elif isinstance(matched_table, dict):
-        table_name = list(matched_table.keys())[0]
-        metadata = matched_table[table_name]
-    else:
-        raise Exception("Invalid matched_table structure.")
-
-    table_name_upper = table_name.upper()
-    prompt_lower = prompt.lower()
-    fields = extract_entities(prompt)
-    selected_cols = []
+    # Initialize variables
+    table_name = None
     where_clauses = []
+    applied_business_terms = []
 
-    # ✅ Business indicator mappings (true/false/null values)
-    for key, rule in BUSINESS_TERMS.items():
-        if key in prompt_lower and rule["table"].lower() == table_name.lower():
+    # Apply business rules for table selection and conditions
+    for key, rule in business_terms.items():
+        logger.debug(f"Checking business term: {key}")
+        if key in prompt_lower and (not table_name or rule["table"].upper() == table_name):
             col = rule["column"].upper()
             if rule.get("not_null"):
                 where_clauses.append(f"{col} IS NOT NULL")
+                logger.debug(f"Applied business rule: {col} IS NOT NULL for key {key}")
             elif rule.get("is_null"):
                 where_clauses.append(f"{col} IS NULL")
+                logger.debug(f"Applied business rule: {col} IS NULL for key {key}")
             elif "value" in rule:
                 val = rule["value"]
-                if isinstance(val, bool):
-                    val = str(val).upper()  # For SQL BOOLEAN
-                elif isinstance(val, str):
-                    val = f"'{val}'"
+                val = str(val).upper() if isinstance(val, bool) or val in ["0", "1"] else f"'{val}'"
                 where_clauses.append(f"{col} = {val}")
+                logger.debug(f"Applied business rule: {col} = {val} for key {key}")
+            applied_business_terms.append(key)
+            if not table_name:
+                table_name = rule["table"].upper()
+                logger.debug(f"Selected table {table_name} via business term: {key}")
 
-    # ✅ Detect if it's a COUNT query
-    is_count = any(word in prompt_lower for word in ["how many", "count", "number of"])
+    # Determine table and metadata if not set by business terms
+    if not table_name and matched_table:
+        if isinstance(matched_table, str):
+            table_name = matched_table.upper()
+            metadata = schema_metadata.get(table_name, {})
+            if not metadata:
+                # Try case-insensitive lookup
+                for key in schema_metadata:
+                    if key.upper() == table_name:
+                        metadata = schema_metadata[key]
+                        table_name = key.upper()
+                        logger.debug(f"Case-insensitive match for table: {table_name}")
+                        break
+        elif isinstance(matched_table, dict):
+            table_name = list(matched_table.keys())[0].upper()
+            metadata = matched_table[table_name]
+        else:
+            logger.error("Invalid matched_table structure")
+            raise Exception("Invalid matched_table structure.")
+    elif not table_name:
+        logger.error("Could not determine table for prompt")
+        raise Exception("❌ Could not determine table for prompt")
 
-    # ✅ Determine columns to SELECT
-    user_specified = False
-    mentioned_indicator = any(key in prompt_lower for key in BUSINESS_TERMS)
-    for col, desc in metadata.get("columns", {}).items():
-        col_upper = col.upper()
-        for f in fields:
-            if f in desc.lower() or f in col.lower():
-                selected_cols.append(col_upper)
-                user_specified = True
+    # Fallback to rag_data if metadata is missing
+    metadata = schema_metadata.get(table_name, {})
+    if not metadata and rag_data:
+        for rag_table, rag_meta in rag_data.items():
+            if rag_table.upper() == table_name:
+                metadata = rag_meta
+                logger.debug(f"Using rag_data metadata for table: {table_name}")
                 break
 
-    if not user_specified or mentioned_indicator:
-        selected_cols = [col.upper() for col in metadata.get("columns", {}).keys()]
+    if not metadata:
+        logger.error(f"No metadata found for table: {table_name}")
+        raise Exception(f"No metadata found for table: {table_name}")
 
-    # ✅ SELECT clause
-    if is_count:
-        query = f"SELECT COUNT(*) AS TOTAL FROM {table_name_upper}"
+    table_name_upper = table_name.upper()
+    columns_meta = metadata.get("columns", {})
+    fields = extract_entities(prompt)
+
+    if not applied_business_terms and not is_follow_up_prompt(prompt):
+        logger.warning(f"No business terms matched for prompt: {prompt}")
+
+    # Detect aggregation
+    force_count = any(kw in prompt_lower for kw in ["how many", "number of"])
+    if force_count:
+        agg_func = "COUNT"
+        agg_col = None
     else:
-        query = f"SELECT {', '.join(selected_cols)} FROM {table_name_upper}"
+        try:
+            agg_func, agg_col = detect_aggregation(prompt, dict(columns_meta))
+        except Exception:
+            agg_func, agg_col = None, None
+        logger.debug(f"Aggregation detected: {agg_func} on column {agg_col}")
 
-    # ✅ Date range detection
+    # Fallback column for COUNT
+    if agg_func == "COUNT" and not agg_col:
+        numeric_col = next(
+            (col for col, meta in columns_meta.items()
+             if isinstance(meta, dict) and meta.get("type") not in ["boolean"]),
+            None
+        )
+        agg_col = numeric_col or "*"
+        logger.debug(f"Selected COUNT column: {agg_col}")
+
+    # Handle percentage logic
+    if agg_func == "PERCENTAGE":
+        if not agg_col:
+            for key, rule in business_terms.items():
+                if key in prompt_lower and rule["table"].upper() == table_name_upper:
+                    agg_col = rule["column"].upper()
+                    break
+        if not agg_col:
+            for col, meta in columns_meta.items():
+                if isinstance(meta, dict) and meta.get("type") == "boolean":
+                    agg_col = col
+                    break
+        if not agg_col:
+            logger.error("Could not infer condition column for percentage query")
+            raise Exception("❌ Could not infer condition column for percentage query")
+
+    # Build aggregation query if needed
+    if agg_func:
+        try:
+            query = build_aggregation_query(agg_func, agg_col, table_name_upper, prompt, dict(columns_meta))
+            if where_clauses:
+                where_clause = " WHERE " + " AND ".join(where_clauses)
+                query = re.sub(r"\bWHERE\b.*?(LIMIT|$)", where_clause, query, flags=re.IGNORECASE)
+                if "LIMIT" not in query.upper():
+                    limit = extract_limit_from_prompt(prompt) or 50
+                    query += f" LIMIT {limit}"
+            logger.info(f"Generated aggregation SQL: {query}")
+            return query
+        except Exception as e:
+            logger.error(f"Aggregation query failed: {str(e)}")
+            raise Exception(f"❌ Aggregation query failed: {str(e)}")
+
+    # Date range logic
     inferred_from, inferred_to = parse_date_range_from_prompt(prompt)
     from_dt = parser.parse(from_date).strftime("%Y-%m-%d") if from_date else inferred_from
     to_dt = parser.parse(to_date).strftime("%Y-%m-%d") if to_date else inferred_to
 
-    # ✅ Try to detect suitable date column
-    date_columns = [
-        col.upper() for col in metadata.get("columns", {})
-        if col.lower().endswith("_dt") or "date" in col.lower()
-    ]
-    if not date_columns:
-        date_columns = [
-            col.upper() for col in metadata.get("columns", {})
-            if col.lower().endswith("_ts") or "timestamp" in col.lower()
-        ]
-
-    if (from_dt or to_dt) and date_columns:
-        date_col = date_columns[0]
+    date_cols = [col for col, meta in columns_meta.items()
+                 if isinstance(meta, dict) and meta.get("type") in ["date", "timestamp"]]
+    if (from_dt or to_dt) and date_cols:
+        date_col = date_cols[0].upper()
         if from_dt:
             where_clauses.append(f"{date_col} >= '{from_dt}'")
         if to_dt:
             where_clauses.append(f"{date_col} <= '{to_dt}'")
-        if not is_count and date_col not in selected_cols:
-            selected_cols.append(date_col)
+        logger.debug(f"Applied date filter: {date_col} from {from_dt} to {to_dt}")
 
-    # ✅ Comparative filters (e.g. loan amount > 50000)
-    comparative_filters = extract_comparative_filters(prompt, metadata.get("columns", {}))
-    if comparative_filters:
-        where_clauses.extend(comparative_filters)
+    # Other filters
+    try:
+        where_clauses += extract_comparative_filters(prompt, dict(columns_meta))
+        where_clauses += extract_direct_column_filters(prompt, dict(columns_meta))
+        logger.debug(f"Additional filters applied: {where_clauses}")
+    except Exception as e:
+        logger.error(f"Filter extraction failed: {str(e)}")
+        raise Exception(f"❌ Filter extraction failed: {str(e)}")
 
-    # ✅ Direct equality filters (e.g. state code is NY)
-    direct_filters = extract_direct_column_filters(prompt, metadata.get("columns", {}))
-    if direct_filters:
-        where_clauses.extend(direct_filters)
-
-    # ✅ WHERE clause
+    # Columns to SELECT
+    selected_cols = [col.upper() for col in columns_meta.keys()]
+    query = f"SELECT {', '.join(selected_cols)} FROM {table_name_upper}"
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
-
-    # ✅ LIMIT clause
-    if not is_count:
-        final_limit = extract_limit_from_prompt(prompt, default_limit=50)
-        query += f" LIMIT {final_limit}"
-
+    else:
+        logger.warning(f"No WHERE clauses generated for prompt: {prompt}")
+    query += f" LIMIT {limit or extract_limit_from_prompt(prompt) or 50}"
+    logger.info(f"Generated SQL: {query}")
     return query
 
 

@@ -90,56 +90,7 @@ body.hide-header .header {
   -webkit-text-fill-color: transparent;
 }
 
-/* Suggestion Cards */
-.suggestion-list {
-  display: flex;
-  gap: 1.25rem;
-  overflow-x: auto;
-  list-style: none;
-  margin-top: 2.5vh;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
 
-.suggestion-list .suggestion {
-  width: 300px;
-  /* height: 200px; */
-  padding: 1rem;
-  flex-shrink: 0;
-  font-size: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: space-between;
-  border-radius: 0.75rem;
-  background: linear-gradient(to right, var(--card-color) , var(--end));
-
-  transition: 0.2s ease;
-  cursor: pointer;
-}
-
-.suggestion-list .suggestion:hover {
-  background: var(--end);
-}
-
-.suggestion-list .suggestion .text,
-.suggestion-list .suggestion .icon {
-  color: var(--text-color);
-  font-weight: 400;
-}
-
-.suggestion-list .suggestion .icon {
-  width: 38px;
-  height: 38px;
-  font-size: 1.3rem;
-  margin-top: .5rem;
-   background: linear-gradient(to right, #0775f3, #02053b);
-   color: #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 /* Chat List */
 .chat-list {

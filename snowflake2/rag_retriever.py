@@ -1,27 +1,23 @@
 
 
-
-
-
 # import json
 # from difflib import SequenceMatcher
 # import os
 # import sys
 
-# schema_path = "schema_metadata.json"
-# business_terms_path = "business_mapping.json"
+# schema_path = "data/schema_metadata.json"
+# business_terms_path = "data/business_mapping.json"
 
 # # ✅ Validate schema file
 # if not os.path.exists(schema_path):
 #     print(f"❌ ERROR: schema file not found: {schema_path}")
 #     sys.exit(1)
 
-# # ✅ Validate business mapping file
 # if not os.path.exists(business_terms_path):
 #     print(f"❌ ERROR: business mapping file not found: {business_terms_path}")
 #     sys.exit(1)
 
-# # ✅ Load and preview files
+# # ✅ Load schema and business terms
 # try:
 #     with open(schema_path, "r") as f:
 #         schema_content = f.read().strip()
@@ -42,37 +38,56 @@
 #     print(f"❌ Error loading business_mapping.json: {e}")
 #     sys.exit(1)
 
-# # ✅ Similarity utility
+# # ✅ Utility
 # def similarity(a, b):
 #     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
-# # ✅ Core Table Retrieval Logic
+# # 🚫 Generic terms to penalize if used alone
+# GENERIC_TERMS = {"application", "request", "record", "entry", "data"}
+
+
 # def retrieve_relevant_table(prompt: str):
 #     prompt_lower = prompt.lower()
 #     table_scores = {}
 
-#     # 💡 Direct business keyword mapping
+#     # ✅ Business Term Override (high confidence)
 #     for keyword, mapping in business_terms.items():
 #         if keyword in prompt_lower:
 #             matched_table = mapping["table"]
 #             return {matched_table: schema_metadata.get(matched_table, {})}
 
-#     # 💡 Approximate matching (fallback)
+#     # ✅ Compute table scores
 #     for table, meta in schema_metadata.items():
-#         table_score = similarity(prompt_lower, table)
-#         if table_score > 0.7:
-#             return {table: meta}
-#         for col, desc in meta.get("columns", {}).items():
-#             score = similarity(prompt_lower, col) + similarity(prompt_lower, desc)
-#             table_scores.setdefault(table, 0)
-#             table_scores[table] += score
+#         score = 0
 
-#     # 💡 Pick highest scoring fallback
+#         # ✅ Boost for matching column names/descriptions
+#         for col, desc_obj in meta.get("columns", {}).items():
+#             col_lower = col.lower()
+
+#             # Handle new schema format where desc_obj is a dict with 'desc' key
+#             if isinstance(desc_obj, dict):
+#                 desc_lower = desc_obj.get("desc", "").lower()
+#             else:
+#                 desc_lower = str(desc_obj).lower()
+
+#             if col_lower in prompt_lower or desc_lower in prompt_lower:
+#                 score += 3
+#             else:
+#                 score += similarity(prompt_lower, col_lower) + similarity(prompt_lower, desc_lower)
+
+#         # 🚫 Penalize generic terms if no strong keyword match
+#         if any(generic in prompt_lower for generic in GENERIC_TERMS):
+#             score -= 1
+
+#         table_scores[table] = score
+
+#     # ✅ Return highest scored table
 #     if table_scores:
 #         best_table = max(table_scores.items(), key=lambda x: x[1])[0]
 #         return {best_table: schema_metadata[best_table]}
-    
+
 #     return {}
+
 
 
 
@@ -85,79 +100,117 @@
 import json
 from difflib import SequenceMatcher
 import os
-import sys
+import logging
 
-schema_path = "schema_metadata.json"
-business_terms_path = "business_mapping.json"
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-# ✅ Validate schema file
+schema_path = "data/schema_metadata.json"
+business_terms_path = "data/business_mapping.json"
+
+# Validate schema file
 if not os.path.exists(schema_path):
-    print(f"❌ ERROR: schema file not found: {schema_path}")
-    sys.exit(1)
+    logger.error(f"Schema file not found: {schema_path}")
+    schema_metadata = {}
+else:
+    try:
+        with open(schema_path, "r") as f:
+            schema_content = f.read().strip()
+            if not schema_content:
+                logger.error("schema_metadata.json is empty")
+                schema_metadata = {}
+            else:
+                schema_metadata = json.loads(schema_content)
+    except Exception as e:
+        logger.error(f"Error loading schema_metadata.json: {e}")
+        schema_metadata = {}
 
+# Validate business terms file
 if not os.path.exists(business_terms_path):
-    print(f"❌ ERROR: business mapping file not found: {business_terms_path}")
-    sys.exit(1)
+    logger.error(f"Business mapping file not found: {business_terms_path}")
+    business_terms = {}
+else:
+    try:
+        with open(business_terms_path, "r") as f:
+            business_content = f.read().strip()
+            if not business_content:
+                logger.error("business_mapping.json is empty")
+                business_terms = {}
+            else:
+                business_terms = json.loads(business_content)
+    except Exception as e:
+        logger.error(f"Error loading business_mapping.json: {e}")
+        business_terms = {}
 
-# ✅ Load schema and business terms
-try:
-    with open(schema_path, "r") as f:
-        schema_content = f.read().strip()
-        if not schema_content:
-            raise ValueError("schema_metadata.json is empty")
-        schema_metadata = json.loads(schema_content)
-except Exception as e:
-    print(f"❌ Error loading schema_metadata.json: {e}")
-    sys.exit(1)
+# Generic terms to penalize if used alone
+GENERIC_TERMS = {"request", "record", "entry", "data"}
 
-try:
-    with open(business_terms_path, "r") as f:
-        business_content = f.read().strip()
-        if not business_content:
-            raise ValueError("business_mapping.json is empty")
-        business_terms = json.loads(business_content)
-except Exception as e:
-    print(f"❌ Error loading business_mapping.json: {e}")
-    sys.exit(1)
-
-# ✅ Utility
 def similarity(a, b):
+    """Calculate similarity between two strings."""
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
-# 🚫 Generic terms to penalize if used alone
-GENERIC_TERMS = {"application", "request", "record", "entry", "data"}
-
-# ✅ Table Retrieval Logic
-def retrieve_relevant_table(prompt: str):
+def retrieve_relevant_table(prompt: str, memory_context=None):
+    """Retrieve the most relevant table based on prompt and context."""
+    from followup_handler import is_follow_up_prompt
     prompt_lower = prompt.lower()
+    prompt_norm = prompt_lower
+    logger.debug(f"Processing prompt for table retrieval: {prompt_lower}")
+
+    # Skip table retrieval for follow-up prompts
+    if is_follow_up_prompt(prompt) and memory_context:
+        logger.debug("Follow-up prompt detected, skipping table retrieval")
+        return {}
+
     table_scores = {}
 
-    # ✅ Business Term Override (high confidence)
+    # Business Term Override (high confidence)
     for keyword, mapping in business_terms.items():
         if keyword in prompt_lower:
-            matched_table = mapping["table"]
-            return {matched_table: schema_metadata.get(matched_table, {})}
+            matched_table = mapping["table"].upper()
+            if matched_table in schema_metadata:
+                logger.debug(f"Matched table {matched_table} via business term: {keyword}")
+                return {matched_table: schema_metadata[matched_table]}
+            else:
+                logger.warning(f"Business term table {matched_table} not in schema_metadata")
 
-    # ✅ Compute table scores
+    # Compute table scores
     for table, meta in schema_metadata.items():
         score = 0
+        table_desc = meta.get("description", "").lower()
 
-        # ✅ Boost for matching column names/descriptions
-        for col, desc in meta.get("columns", {}).items():
-            if col.lower() in prompt_lower or desc.lower() in prompt_lower:
-                score += 3
+        # Boost for matching table name or description
+        score += max(
+            similarity(prompt_norm, table.lower()),
+            similarity(prompt_norm, table_desc)
+        ) * 10
+
+        # Boost for matching column names/descriptions
+        for col, desc_obj in meta.get("columns", {}).items():
+            col_lower = col.lower()
+            if isinstance(desc_obj, dict):
+                desc_lower = desc_obj.get("desc", "").lower()
             else:
-                score += similarity(prompt_lower, col) + similarity(prompt_lower, desc)
+                desc_lower = str(desc_obj).lower()
+            if col_lower in prompt_lower or desc_lower in prompt_lower:
+                score += 5
+            else:
+                score += similarity(prompt_lower, col_lower) + similarity(prompt_lower, desc_lower)
 
-        # 🚫 Penalize generic terms if no strong keyword match
-        if any(generic in prompt_lower for generic in GENERIC_TERMS):
-            score -= 1
-
+        # Penalize generic terms if no strong keyword match
+        if any(generic in prompt_lower for generic in GENERIC_TERMS) and score < 10:
+            score -= 5
         table_scores[table] = score
+        logger.debug(f"Table {table} score: {score}")
 
-    # ✅ Return highest scored table
+    # Return highest scored table
     if table_scores:
         best_table = max(table_scores.items(), key=lambda x: x[1])[0]
-        return {best_table: schema_metadata[best_table]}
-
+        if table_scores[best_table] > 5:
+            logger.debug(f"Selected table: {best_table} with score {table_scores[best_table]}")
+            return {best_table: schema_metadata[best_table]}
+        else:
+            logger.warning(f"No table matched with sufficient score for prompt: {prompt}")
+            return {}
+    logger.warning(f"No table matched for prompt: {prompt}")
     return {}
