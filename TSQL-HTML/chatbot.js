@@ -160,6 +160,9 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
     html += `<div>No data found.</div>`;
   } else {
     html += `<div class="data-table-label"><strong>Data Table:</strong></div>`;
+    html += `<div class="sql-block"><strong>SQL Query:</strong><br>${
+      sqlQuery || "No SQL generated"
+    }</div>`;
     html += `<div class="table-wrapper"><table class="response-table"><thead><tr>`;
 
     const headers = Object.keys(dataArray[0]);
@@ -178,9 +181,6 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 
     html += `</tbody></table></div>`;
 
-    html += `<div class="sql-block"><strong>SQL Query:</strong><br>${
-      sqlQuery || "No SQL generated"
-    }</div>`;
     // Add download buttons with unique IDs
     html += `
       <button class="download-btn" id="${uid}-csv">⬇ Download CSV</button>

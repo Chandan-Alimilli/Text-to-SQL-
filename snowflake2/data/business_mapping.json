@@ -39,5 +39,15 @@
     "table": "auto_fnce_orgn_refn_clse",
     "column": "CLSE_TASK_STG_STS_TX",
     "value": "Pending"
+  },
+  "state-allowed": {
+    "table": "auto_fnce_orgn_refn_elg",
+    "column": "STATE_ALOW_IN",
+    "value": 1
+  },
+  "state-notallowed": {
+    "table": "auto_fnce_orgn_refn_elg",
+    "column": "STATE_ALOW_IN",
+    "value": 0
   }
 }

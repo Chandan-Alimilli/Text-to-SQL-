@@ -1,4 +1,5 @@
 
+
 import re
 import json
 import spacy
@@ -79,66 +80,79 @@ def parse_date_range_from_prompt(prompt: str) -> tuple:
             from_dt = parser.parse(date_matches[0]).strftime("%Y-%m-%d")
             to_dt = parser.parse(date_matches[1]).strftime("%Y-%m-%d")
             logger.debug(f"Parsed date range: {from_dt} to {to_dt}")
-        else:
-            # Relative date phrases
-            relative_phrases = {
-                "this month": (
-                    today.replace(day=1),
-                    (today.replace(day=1) + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-                ),
-                "last month": (
-                    (today.replace(day=1) - timedelta(days=1)).replace(day=1),
-                    today.replace(day=1) - timedelta(days=1)
-                ),
-                "this week": (
-                    today - timedelta(days=today.weekday()),
-                    today + timedelta(days=6 - today.weekday())
-                ),
-                "last week": (
-                    today - timedelta(days=today.weekday() + 7),
-                    today - timedelta(days=today.weekday() + 1)
-                ),
-                "today": (today, today),
-                "yesterday": (
-                    today - timedelta(days=1),
-                    today - timedelta(days=1)
-                ),
-                "this year": (
-                    today.replace(month=1, day=1),
-                    today.replace(month=12, day=31)
-                ),
-                "last year": (
-                    today.replace(year=today.year - 1, month=1, day=1),
-                    today.replace(year=today.year - 1, month=12, day=31)
-                )
-            }
 
-            for phrase, (start, end) in relative_phrases.items():
-                if phrase in prompt:
-                    from_dt = start.strftime("%Y-%m-%d")
-                    to_dt = end.strftime("%Y-%m-%d")
-                    logger.debug(f"Parsed relative date phrase '{phrase}': {from_dt} to {to_dt}")
+        # Handle "from month to month" (e.g., "from April to June")
+        month_range_match = re.search(r"from\s+(\w+)\s+to\s+(\w+)", prompt)
+        if month_range_match:
+            start_month, end_month = month_range_match.groups()
+            start_month_num = MONTHS_MAP.get(start_month.lower())
+            end_month_num = MONTHS_MAP.get(end_month.lower())
+            if start_month_num and end_month_num:
+                year = today.year
+                from_dt = datetime(year, start_month_num, 1).strftime("%Y-%m-%d")
+                to_dt = (datetime(year, end_month_num + 1, 1) - timedelta(days=1)).strftime("%Y-%m-%d")
+                logger.debug(f"Parsed month range: {from_dt} to {to_dt}")
+                return from_dt, to_dt
+
+        # Relative date phrases
+        relative_phrases = {
+            "this month": (
+                today.replace(day=1),
+                (today.replace(day=1) + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            ),
+            "last month": (
+                (today.replace(day=1) - timedelta(days=1)).replace(day=1),
+                today.replace(day=1) - timedelta(days=1)
+            ),
+            "this week": (
+                today - timedelta(days=today.weekday()),
+                today + timedelta(days=6 - today.weekday())
+            ),
+            "last week": (
+                today - timedelta(days=today.weekday() + 7),
+                today - timedelta(days=today.weekday() + 1)
+            ),
+            "today": (today, today),
+            "yesterday": (
+                today - timedelta(days=1),
+                today - timedelta(days=1)
+            ),
+            "this year": (
+                today.replace(month=1, day=1),
+                today.replace(month=12, day=31)
+            ),
+            "last year": (
+                today.replace(year=today.year - 1, month=1, day=1),
+                today.replace(year=today.year - 1, month=12, day=31)
+            )
+        }
+
+        for phrase, (start, end) in relative_phrases.items():
+            if phrase in prompt:
+                from_dt = start.strftime("%Y-%m-%d")
+                to_dt = end.strftime("%Y-%m-%d")
+                logger.debug(f"Parsed relative date phrase '{phrase}': {from_dt} to {to_dt}")
+                break
+
+        # Month names (e.g., "in May", "during Jan")
+        if not from_dt and not to_dt:
+            for word in prompt.split():
+                word = word.strip(",.")
+                if word in MONTHS_MAP:
+                    year = today.year
+                    month = MONTHS_MAP[word]
+                    from_dt = f"{year}-{month:02d}-01"
+                    to_dt = (datetime(year, month, 1) + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+                    to_dt = to_dt.strftime("%Y-%m-%d")
+                    logger.debug(f"Parsed month name '{word}': {from_dt} to {to_dt}")
                     break
 
-            # Month names (e.g., "in May", "during Jan")
-            if not from_dt and not to_dt:
-                for word in prompt.split():
-                    word = word.strip(",.")
-                    if word in MONTHS_MAP:
-                        year = today.year
-                        month = MONTHS_MAP[word]
-                        from_dt = f"{year}-{month:02d}-01"
-                        to_dt = (datetime(year, month, 1) + timedelta(days=31)).replace(day=1) - timedelta(days=1)
-                        to_dt = to_dt.strftime("%Y-%m-%d")
-                        logger.debug(f"Parsed month name '{word}': {from_dt} to {to_dt}")
-                        break
-
-            # Fallback with dateparser for other relative expressions
-            if not from_dt and not to_dt:
-                parsed = dateparser.parse(prompt, settings={"PREFER_DATES_FROM": "past", "STRICT_PARSING": False})
-                if parsed:
-                    from_dt = to_dt = parsed.strftime("%Y-%m-%d")
-                    logger.debug(f"Dateparser fallback: {from_dt}")
+        # Fallback with dateparser for other relative expressions
+        if not from_dt and not to_dt:
+            parsed = dateparser.parse(prompt, settings={"PREFER_DATES_FROM": "past", "STRICT_PARSING": False})
+            if parsed:
+                from_dt = to_dt = parsed.strftime("%Y-%m-%d")
+                logger.debug(f"Dateparser fallback: {from_dt}")
 
         if from_dt and to_dt:
             logger.info(f"Final date range: {from_dt} to {to_dt}")
@@ -151,9 +165,10 @@ def parse_date_range_from_prompt(prompt: str) -> tuple:
         return None, None
 
 # Extract comparative filters
-def extract_comparative_filters(prompt: str, metadata_columns: dict) -> list:
-    """Extract SQL comparative filters (e.g., 'AMOUNT > 5000') from prompt."""
+def extract_comparative_filters(prompt: str, metadata_columns: dict) -> tuple:
+    """Extract SQL comparative filters (e.g., 'AMOUNT > 5000') from prompt and return filters with affected columns."""
     filters = []
+    filtered_columns = set()  # Track columns with comparative filters
     prompt_lower = prompt.lower()
     doc = nlp(prompt)
 
@@ -192,6 +207,7 @@ def extract_comparative_filters(prompt: str, metadata_columns: dict) -> list:
                                     if fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_text):
                                         value = f"'{value_token}'" if not value_token.replace('.', '').isdigit() else value_token
                                         filters.append(f"{col.upper()} {symbol} {value}")
+                                        filtered_columns.add(col.upper())
                                         logger.debug(f"Parsed comparative filter: {col.upper()} {symbol} {value}")
                                         break
                             break
@@ -206,25 +222,27 @@ def extract_comparative_filters(prompt: str, metadata_columns: dict) -> list:
                 if match:
                     value = match.group(1)
                     filters.append(f"{col.upper()} {symbol} {value}")
+                    filtered_columns.add(col.upper())
                     logger.debug(f"Regex parsed comparative filter: {col.upper()} {symbol} {value}")
                     break
 
         # Remove duplicates while preserving order
         filters = list(dict.fromkeys(filters))
-        logger.info(f"Extracted comparative filters: {filters}")
-        return filters
+        logger.info(f"Extracted comparative filters: {filters}, affected columns: {filtered_columns}")
+        return filters, filtered_columns
 
     except Exception as e:
         logger.error(f"Error extracting comparative filters: {e}")
-        return []
+        return [], set()
 
 # Direct filters (e.g., "state code NY")
-def extract_direct_column_filters(prompt: str, metadata_columns: dict) -> list:
-    """Extract direct SQL filters (e.g., "STATE_CODE = 'NY'") from prompt."""
+def extract_direct_column_filters(prompt: str, metadata_columns: dict, filtered_columns: set = None) -> list:
+    """Extract direct SQL filters (e.g., "STATE_CODE = 'NY'") from prompt, avoiding columns with comparative filters."""
     filters = []
     prompt_lower = normalize_text(prompt)
     ignore_values = {"in", "on", "at", "of", "to", "for", "from", "by", "with"}
     doc = nlp(prompt)
+    filtered_columns = filtered_columns or set()  # Default to empty set if not provided
 
     try:
         # Dependency parsing for direct filters
@@ -233,7 +251,9 @@ def extract_direct_column_filters(prompt: str, metadata_columns: dict) -> list:
                 for col, desc in metadata_columns.items():
                     col_lower = col.lower()
                     desc_lower = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
-                    if fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_lower):
+                    if (fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_lower)) and col.upper() not in filtered_columns:
+                        if metadata_columns[col]["type"] == "numeric":
+                            continue  # Skip numeric columns to avoid duplicate equality filters
                         for child in token.head.children:
                             if child.pos_ in ("NOUN", "PROPN", "NUM") and child.text.lower() not in ignore_values:
                                 value = child.text.strip().lower()
@@ -246,6 +266,8 @@ def extract_direct_column_filters(prompt: str, metadata_columns: dict) -> list:
         for col, desc in metadata_columns.items():
             col_lower = col.lower()
             desc_lower = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
+            if col.upper() in filtered_columns or metadata_columns[col]["type"] == "numeric":
+                continue  # Skip numeric columns or those with comparative filters
             pattern = rf"(?:{desc_lower}|{col_lower})\s+(?:is\s+|from\s+|with\s+|of\s+)?([a-zA-Z0-9\-'.]+)"
             matches = re.findall(pattern, prompt_lower)
             for match in matches:
