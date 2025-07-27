@@ -14,7 +14,7 @@
     "column": "REFN_EL_IN",
     "value": 1
   },
-  "non-eligible": {
+  "non_eligible": {
     "table": "auto_fnce_orgn_refn_elg",
     "column": "REFN_EL_IN",
     "value": 0

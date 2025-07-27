@@ -1,5 +1,4 @@
 
-
 import re
 import json
 import spacy
@@ -40,6 +39,14 @@ MONTHS_MAP = {
     "december": 12, "dec": 12,
 }
 
+# Quarter mappings
+QUARTER_MAP = {
+    "q1": (1, 3),  # Jan-Mar
+    "q2": (4, 6),  # Apr-Jun
+    "q3": (7, 9),  # Jul-Sep
+    "q4": (10, 12) # Oct-Dec
+}
+
 # Normalize text using SpaCy lemmatization
 def normalize_text(text: str) -> str:
     """Normalize text by lemmatizing and removing stopwords/punctuation."""
@@ -65,7 +72,7 @@ def extract_entities(prompt: str) -> list:
 
 # Date range parsing
 def parse_date_range_from_prompt(prompt: str) -> tuple:
-    """Parse date ranges from prompt, handling relative phrases and exact dates."""
+    """Parse date ranges from prompt, handling relative phrases, exact dates, and quarters."""
     prompt = prompt.lower().strip()
     from_dt, to_dt = None, None
     today = datetime.now()
@@ -93,6 +100,21 @@ def parse_date_range_from_prompt(prompt: str) -> tuple:
                 to_dt = (datetime(year, end_month_num + 1, 1) - timedelta(days=1)).strftime("%Y-%m-%d")
                 logger.debug(f"Parsed month range: {from_dt} to {to_dt}")
                 return from_dt, to_dt
+
+        # Quarter detection (e.g., "Q1", "last Q4", "Q2 of 2024")
+        quarter_match = re.search(r"(?:last\s+)?q([1-4])(?:\s+of\s+(\d{4}))?", prompt)
+        if quarter_match:
+            is_last = "last" in quarter_match.group(0)
+            quarter_num = quarter_match.group(1)
+            year_str = quarter_match.group(2)
+            year = today.year - 1 if is_last else today.year
+            if year_str:
+                year = int(year_str)
+            start_month, end_month = QUARTER_MAP.get(f"q{quarter_num}")
+            from_dt = datetime(year, start_month, 1).strftime("%Y-%m-%d")
+            to_dt = (datetime(year, end_month + 1, 1) - timedelta(days=1)).strftime("%Y-%m-%d")
+            logger.debug(f"Parsed quarter '{quarter_match.group(0)}': {from_dt} to {to_dt}")
+            return from_dt, to_dt
 
         # Relative date phrases
         relative_phrases = {
@@ -166,7 +188,7 @@ def parse_date_range_from_prompt(prompt: str) -> tuple:
 
 # Extract comparative filters
 def extract_comparative_filters(prompt: str, metadata_columns: dict) -> tuple:
-    """Extract SQL comparative filters (e.g., 'AMOUNT > 5000') from prompt and return filters with affected columns."""
+    """Extract SQL comparative filters (e.g., 'AMOUNT > 5000', 'AMOUNT BETWEEN 60000 AND 80000') from prompt and return filters with affected columns."""
     filters = []
     filtered_columns = set()  # Track columns with comparative filters
     prompt_lower = prompt.lower()
@@ -193,6 +215,29 @@ def extract_comparative_filters(prompt: str, metadata_columns: dict) -> tuple:
             if token.dep_ in ("attr", "dobj", "pobj") and token.head.lemma_ in ("be", "have"):
                 for child in token.head.children:
                     phrase = " ".join([t.text.lower() for t in child.subtree if not t.is_punct])
+                    # Check for between range
+                    between_match = re.search(r"(between|in between)\s+([\d,.]+(?:k)?)\s+and\s+([\d,.]+(?:k)?)", phrase)
+                    if between_match:
+                        op = "BETWEEN"
+                        col_text = token.text
+                        low_val = between_match.group(2).replace(',', '').replace('k', '000').strip()
+                        high_val = between_match.group(3).replace(',', '').replace('k', '000').strip()
+                        if not low_val.isdigit() or not high_val.isdigit():
+                            logger.warning(f"Invalid numeric range values: {low_val}, {high_val}")
+                            continue
+                        low_val, high_val = min(int(low_val), int(high_val)), max(int(low_val), int(high_val))
+                        for col, desc in metadata_columns.items():
+                            if isinstance(desc, dict) and desc.get("type") == "numeric":
+                                col_lower = col.lower()
+                                desc_text = desc["desc"].lower()
+                                if fuzzy_match(col_text, col_lower) or fuzzy_match(col_text, desc_text):
+                                    filters.append(f"{col.upper()} BETWEEN {low_val} AND {high_val}")
+                                    filtered_columns.add(col.upper())
+                                    logger.debug(f"Parsed between filter: {col.upper()} BETWEEN {low_val} AND {high_val}")
+                                    break
+                        continue
+
+                    # Check for other comparison operators
                     for op_phrase, symbol in comparison_ops.items():
                         if op_phrase in phrase:
                             value_token = None
@@ -202,29 +247,47 @@ def extract_comparative_filters(prompt: str, metadata_columns: dict) -> tuple:
                                     break
                             if value_token:
                                 for col, desc in metadata_columns.items():
-                                    col_lower = col.lower()
-                                    desc_text = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
-                                    if fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_text):
-                                        value = f"'{value_token}'" if not value_token.replace('.', '').isdigit() else value_token
-                                        filters.append(f"{col.upper()} {symbol} {value}")
-                                        filtered_columns.add(col.upper())
-                                        logger.debug(f"Parsed comparative filter: {col.upper()} {symbol} {value}")
-                                        break
+                                    if isinstance(desc, dict) and desc.get("type") == "numeric":
+                                        col_lower = col.lower()
+                                        desc_text = desc["desc"].lower()
+                                        if fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_text):
+                                            value = f"'{value_token}'" if not value_token.replace('.', '').isdigit() else value_token
+                                            filters.append(f"{col.upper()} {symbol} {value}")
+                                            filtered_columns.add(col.upper())
+                                            logger.debug(f"Parsed comparative filter: {col.upper()} {symbol} {value}")
+                                            break
                             break
 
         # Regex fallback for explicit patterns
         for col, desc in metadata_columns.items():
-            col_lower = col.lower()
-            desc_text = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
-            for phrase, symbol in comparison_ops.items():
-                pattern = rf"(?:{desc_text}|{col_lower})\s+(?:is\s+)?{phrase}\s+([0-9]+(?:\.[0-9]+)?)"
-                match = re.search(pattern, prompt_lower)
+            if isinstance(desc, dict) and desc.get("type") == "numeric":
+                col_lower = col.lower()
+                desc_text = desc["desc"].lower()
+                # Between range regex
+                between_pattern = rf"(?:{desc_text}|{col_lower})\s+(?:is\s+)?(?:between|in between)\s+([\d,.]+(?:k)?)\s+and\s+([\d,.]+(?:k)?)"
+                match = re.search(between_pattern, prompt_lower)
                 if match:
-                    value = match.group(1)
-                    filters.append(f"{col.upper()} {symbol} {value}")
+                    low_val = match.group(1).replace(',', '').replace('k', '000').strip()
+                    high_val = match.group(2).replace(',', '').replace('k', '000').strip()
+                    if not low_val.isdigit() or not high_val.isdigit():
+                        logger.warning(f"Invalid numeric range values: {low_val}, {high_val}")
+                        continue
+                    low_val, high_val = min(int(low_val), int(high_val)), max(int(low_val), int(high_val))
+                    filters.append(f"{col.upper()} BETWEEN {low_val} AND {high_val}")
                     filtered_columns.add(col.upper())
-                    logger.debug(f"Regex parsed comparative filter: {col.upper()} {symbol} {value}")
-                    break
+                    logger.debug(f"Regex parsed between filter: {col.upper()} BETWEEN {low_val} AND {high_val}")
+                    continue
+
+                # Other comparison operators
+                for phrase, symbol in comparison_ops.items():
+                    pattern = rf"(?:{desc_text}|{col_lower})\s+(?:is\s+)?{phrase}\s+([0-9]+(?:\.[0-9]+)?)"
+                    match = re.search(pattern, prompt_lower)
+                    if match:
+                        value = match.group(1)
+                        filters.append(f"{col.upper()} {symbol} {value}")
+                        filtered_columns.add(col.upper())
+                        logger.debug(f"Regex parsed comparative filter: {col.upper()} {symbol} {value}")
+                        break
 
         # Remove duplicates while preserving order
         filters = list(dict.fromkeys(filters))

@@ -17,6 +17,7 @@ from mapper_utils import (
 from prompt_utils import extract_limit_from_prompt
 from rag_retriever import schema_metadata
 from aggregation_handler import detect_aggregation, build_aggregation_query
+import auto_progress
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -50,9 +51,9 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
     # Initialize variables
     table_name = None
     where_clauses = []
-    applied_business_terms = []
+    aggregation_conditions = []  # Store multiple business terms and filters for aggregation
     percentage_condition = None
-    percentage_denominator_condition = None  # For queries like "approved over booked"
+    percentage_denominator_condition = None  # For queries like "booked over approved"
 
     # Handle negated and regular business terms
     for key, rule in business_terms.items():
@@ -62,15 +63,21 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
         if "non " + key in prompt_lower or "not " + key in prompt_lower:
             negated = True
             term_match = "non " + key if "non " + key in prompt_lower else "not " + key
-        if term_match in prompt_lower and (not table_name or rule["table"].upper() == table_name):
+        if term_match in prompt_lower:
             col = rule["column"].upper()
-            table_name = rule["table"].upper()
+            if not table_name:
+                table_name = rule["table"].upper()
+            elif rule["table"].upper() != table_name:
+                logger.warning(f"Multiple tables detected for business terms: {table_name} vs {rule['table'].upper()}")
+                continue  # Skip if table mismatch
             if rule.get("not_null"):
-                where_clauses.append(f"{col} IS NOT NULL")
-                logger.debug(f"Applied business rule: {col} IS NOT NULL for key {key}")
+                condition = f"{col} IS NOT NULL"
+                aggregation_conditions.append(condition)
+                logger.debug(f"Applied business rule: {condition} for key {key}")
             elif rule.get("is_null"):
-                where_clauses.append(f"{col} IS NULL")
-                logger.debug(f"Applied business rule: {col} IS NULL for key {key}")
+                condition = f"{col} IS NULL"
+                aggregation_conditions.append(condition)
+                logger.debug(f"Applied business rule: {condition} for key {key}")
             elif "value" in rule:
                 val = rule["value"]
                 val = str(val).upper() if isinstance(val, bool) or val in ["0", "1"] else f"'{val}'"
@@ -83,33 +90,37 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
                         stripped_val = val.strip("'")
                         val = f"'Not {stripped_val}'"
                 condition = f"{col} = {val}"
-                where_clauses.append(condition)
+                aggregation_conditions.append(condition)
                 logger.debug(f"Applied business rule: {condition} for key {term_match}")
-            applied_business_terms.append(term_match)
             if not table_name:
                 table_name = rule["table"].upper()
                 logger.debug(f"Selected table {table_name} via business term: {key}")
 
-    # Detect percentage over another business term (e.g., approved over booked)
-    percentage_over_match = re.search(r"percentage of (\w+) (?:applications )?over (\w+) applications", prompt_lower)
-    if percentage_over_match:
-        numerator_term, denominator_term = percentage_over_match.groups()
-        numerator_rule = business_terms.get(numerator_term)
-        denominator_rule = business_terms.get(denominator_term)
-        if numerator_rule and denominator_rule:
-            numerator_col = numerator_rule["column"].upper()
-            numerator_val = str(numerator_rule["value"]).upper() if isinstance(numerator_rule["value"], bool) or numerator_rule["value"] in ["0", "1"] else f"'{numerator_rule['value']}'"
-            denominator_col = denominator_rule["column"].upper()
-            denominator_val = str(denominator_rule["value"]).upper() if isinstance(denominator_rule["value"], bool) or denominator_rule["value"] in ["0", "1"] else f"'{denominator_rule['value']}'"
-            percentage_condition = f"{numerator_col} = {numerator_val}"
-            percentage_denominator_condition = f"{denominator_col} = {denominator_val}"
-            table_name = numerator_rule["table"].upper()
-            if numerator_rule["table"].upper() != denominator_rule["table"].upper():
-                # Cross-table query
-                table_name = f"{numerator_rule['table'].upper()} t1 JOIN {denominator_rule['table'].upper()} t2 ON t1.APPL_NB = t2.APPL_NB"
-                percentage_condition = f"t1.{numerator_col} = {numerator_val}"
-                percentage_denominator_condition = f"t2.{denominator_col} = {denominator_val}"
-            logger.debug(f"Percentage over business terms: {percentage_condition} / {percentage_denominator_condition}")
+    # Detect percentage with optional "over" clause
+    percentage_match = re.search(r"what is the percentage of ([\w\s]+?)(?: applications)?(?:\s+over\s+([\w\s]+?)(?: applications)?)?", prompt_lower)
+    if percentage_match:
+        numerator_terms = percentage_match.group(1).strip().split()
+        denominator_term = percentage_match.group(2)
+        for term in numerator_terms:
+            rule = business_terms.get(term)
+            if rule and rule["table"].upper() == table_name:
+                col = rule["column"].upper()
+                val = str(rule["value"]).upper() if isinstance(rule["value"], bool) or rule["value"] in ["0", "1"] else f"'{rule['value']}'"
+                condition = f"{col} = {val}"
+                if not percentage_condition:
+                    percentage_condition = condition
+                else:
+                    percentage_condition = f"{percentage_condition} AND {condition}"
+                logger.debug(f"Added to percentage condition: {condition}")
+        if denominator_term:
+            rule = business_terms.get(denominator_term.strip())
+            if rule and rule["table"].upper() == table_name:
+                col = rule["column"].upper()
+                val = str(rule["value"]).upper() if isinstance(rule["value"], bool) or rule["value"] in ["0", "1"] else f"'{rule['value']}'"
+                percentage_denominator_condition = f"{col} = {val}"
+                logger.debug(f"Set denominator condition: {percentage_denominator_condition}")
+        elif not percentage_denominator_condition:
+            percentage_denominator_condition = None  # Default to total count
 
     # Determine table and metadata if not set by business terms
     if not table_name and matched_table:
@@ -151,10 +162,10 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
         raise Exception("❌ Could not determine table for prompt")
 
     # Ensure metadata is valid
-    metadata = schema_metadata.get(table_name.split()[0], {})  # Handle JOIN cases
+    metadata = schema_metadata.get(table_name, {})  # Single table only
     if not metadata and rag_data:
         for rag_table, rag_meta in rag_data.items():
-            if rag_table.upper() == table_name.split()[0]:
+            if rag_table.upper() == table_name:
                 metadata = rag_meta
                 logger.debug(f"Using rag_data metadata for table: {table_name}")
                 break
@@ -166,8 +177,8 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
     columns_meta = metadata.get("columns", {})
     fields = extract_entities(prompt)
 
-    if not applied_business_terms:
-        logger.warning(f"No business terms matched for prompt: {prompt}")
+    if not aggregation_conditions and not percentage_condition:
+        logger.warning(f"No business terms or percentage conditions matched for prompt: {prompt}")
 
     # Detect aggregation
     force_count = any(kw in prompt_lower for kw in ["how many", "number of", "count of"])
@@ -192,7 +203,7 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
                 agg_col = next(
                     (col for col, meta in columns_meta.items()
                      if isinstance(meta, dict) and meta.get("type") not in ["boolean"]),
-                    "APPL_NB"
+                    "ACCT_NB"
                 )
                 logger.debug(f"Selected COUNT column: {agg_col}")
             elif agg_func == "SUM":
@@ -208,40 +219,20 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
                 )
                 logger.debug(f"Selected SUM column: {agg_col}")
 
-    # Handle percentage logic
+    # Handle percentage logic with multiple conditions
     if agg_func == "PERCENTAGE":
-        if not percentage_condition:
-            # Try business terms first
-            for key, rule in business_terms.items():
-                negated = "non " + key in prompt_lower or "not " + key in prompt_lower
-                term_match = "non " + key if "non " + key in prompt_lower else "not " + key if "not " + key in prompt_lower else key
-                if term_match in prompt_lower and rule["table"].upper() == table_name.split()[0]:
-                    agg_col = rule["column"].upper()
-                    val = rule["value"]
-                    val = str(val).upper() if isinstance(val, bool) or val in ["0", "1"] else f"'{val}'"
-                    if negated and key in ["eligible", "non-eligible", "approved", "rejected", "booked", "declined"]:
-                        if val == "'1'":
-                            val = "'0'"
-                        elif val == "'0'":
-                            val = "'1'"
-                        else:
-                            stripped_val = val.strip("'")
-                            val = f"'Not {stripped_val}'"
-                    percentage_condition = f"{agg_col} = {val}"
-                    where_clauses.append(percentage_condition)  # Business term conditions go to WHERE
-                    logger.debug(f"Selected PERCENTAGE condition from business term: {percentage_condition}")
-                    break
-        # If no business term or multiple conditions, try comparative/direct filters
-        if not percentage_condition or " and " in prompt_lower:
-            comparative_filters, filtered_columns = extract_comparative_filters(prompt, columns_meta)
-            direct_filters = extract_direct_column_filters(prompt, columns_meta, filtered_columns=filtered_columns)
-            all_filters = comparative_filters + direct_filters
-            if all_filters:
-                percentage_condition = " AND ".join(all_filters) if all_filters else percentage_condition
-                logger.debug(f"Percentage condition from filters: {percentage_condition}")
-            elif not percentage_condition:
-                logger.error("Could not infer condition for percentage query")
-                raise Exception("❌ Could not infer condition for percentage query")
+        if not percentage_condition and aggregation_conditions:
+            percentage_condition = " AND ".join(aggregation_conditions)
+            logger.debug(f"Combined multiple business terms: {percentage_condition}")
+        # Add additional filters if present
+        comparative_filters, filtered_columns = extract_comparative_filters(prompt, columns_meta)
+        direct_filters = extract_direct_column_filters(prompt, columns_meta, filtered_columns=filtered_columns)
+        comparative_filters = list(comparative_filters)
+        direct_filters = list(direct_filters)
+        all_filters = comparative_filters + direct_filters
+        if all_filters:
+            percentage_condition = f"{percentage_condition} AND {' AND '.join(all_filters)}" if percentage_condition else " AND ".join(all_filters)
+            logger.debug(f"Percentage condition with filters: {percentage_condition}")
 
     # Date range logic
     inferred_from, inferred_to = parse_date_range_from_prompt(prompt)
@@ -267,11 +258,12 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
         additional_filters = comparative_filters + direct_filters
         additional_filters = list(dict.fromkeys(additional_filters))  # Remove duplicates
         if agg_func != "PERCENTAGE":
+            where_clauses += aggregation_conditions  # Add all business terms
             where_clauses += additional_filters
-            logger.debug(f"Applied filters for non-percentage query: {additional_filters}")
-        elif agg_func == "PERCENTAGE" and percentage_condition and not percentage_over_match:
+            logger.debug(f"Applied filters for non-percentage query: {where_clauses}")
+        elif agg_func == "PERCENTAGE" and percentage_condition and not percentage_denominator_condition:
             # Exclude percentage_condition from where_clauses
-            percentage_conditions = set(percentage_condition.split(" AND "))
+            percentage_conditions = set(percentage_condition.split(" AND ")) if percentage_condition else set()
             additional_filters = [f for f in additional_filters if f not in percentage_conditions]
             if additional_filters:
                 where_clauses += additional_filters
@@ -280,25 +272,33 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
         logger.error(f"Filter extraction failed: {str(e)}")
         raise Exception(f"❌ Filter extraction failed: {str(e)}")
 
+    # Extract limit from prompt
+    extracted_limit = extract_limit_from_prompt(prompt)
+
     # Build aggregation query
     if agg_func:
         try:
-            if agg_func == "PERCENTAGE" and percentage_denominator_condition:
-                # Custom percentage query for "term1 over term2"
-                query = f"SELECT ROUND(100.0 * COUNT(CASE WHEN {percentage_condition} THEN 1 END) / NULLIF(COUNT(CASE WHEN {percentage_denominator_condition} THEN 1 END), 0), 2) AS percentage_result FROM {table_name_upper}"
-            else:
-                query = build_aggregation_query(agg_func, agg_col, table_name_upper, prompt, columns_meta, percentage_condition)
+            query = build_aggregation_query(agg_func, agg_col, table_name_upper, prompt, columns_meta, percentage_condition, percentage_denominator_condition)
             if where_clauses:
                 where_clause = " WHERE " + " AND ".join(where_clauses)
                 query = re.sub(r"\bWHERE\b.*?(LIMIT|$)", where_clause, query, flags=re.IGNORECASE) or query + where_clause
             if "LIMIT" not in query.upper():
-                limit = extract_limit_from_prompt(prompt) or 50
-                query += f" LIMIT {limit}"
+                # Apply explicit limit if specified, otherwise apply default limit only if no date range
+                if extracted_limit != 50:  # 50 is the default limit in prompt_utils
+                    query += f" LIMIT {extracted_limit}"
+                elif not (from_dt or to_dt):
+                    query += f" LIMIT {limit or 50}"
             logger.info(f"Generated aggregation SQL: {query}")
             return query
         except Exception as e:
             logger.error(f"Aggregation query failed: {str(e)}")
             raise Exception(f"❌ Aggregation query failed: {str(e)}")
+    else:
+        # Explicitly check for auto progress request with improved detection
+        progress_query = auto_progress.build_progress_query(prompt, schema_metadata, business_terms)
+        if progress_query:
+            logger.info(f"Generated progress SQL: {progress_query}")
+            return progress_query
 
     # Default SELECT query
     selected_cols = [col.upper() for col in columns_meta.keys()]
@@ -307,6 +307,10 @@ def generate_sql_query(prompt, matched_table=None, matched_metadata=None, rag_da
         query += " WHERE " + " AND ".join(where_clauses)
     else:
         logger.warning(f"No WHERE clauses generated for prompt: {prompt}")
-    query += f" LIMIT {limit or extract_limit_from_prompt(prompt) or 50}"
+    # Apply explicit limit if specified, otherwise apply default limit only if no date range
+    if extracted_limit != 50:  # 50 is the default limit in prompt_utils
+        query += f" LIMIT {extracted_limit}"
+    elif not (from_dt or to_dt):
+        query += f" LIMIT {limit or 50}"
     logger.info(f"Generated SQL: {query}")
     return query

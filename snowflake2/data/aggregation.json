@@ -1,0 +1,8 @@
+{
+  "sum": ["total", "sum", "add up", "combined", "altogether"],
+  "avg": ["average", "avg", "mean", "typical"],
+  "min": ["minimum", "lowest", "smallest","min"],
+  "max": ["maximum", "highest", "largest","max"],
+  "count": ["how many", "count", "number of", "total number"],
+  "conversion_rate": ["conversion rate", "success rate", "approval ratio"]
+}

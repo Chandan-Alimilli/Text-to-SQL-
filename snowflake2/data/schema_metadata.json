@@ -25,8 +25,7 @@
       "VHCL_FEE_AM": { "desc": "vehicle fee amount", "type": "numeric" },
       "ORGN_LOAN_PYF_AM": { "desc": "original loan payoff amount", "type": "numeric" },
       "ADDL_FEE_AM": { "desc": "additional fee", "type": "numeric" },
-      "EFF_DT": { "desc": "effective date", "type": "date" },
-      "ETL_TS": { "desc": "ETL timestamp", "type": "timestamp" }
+      "EFF_DT": { "desc": "effective date", "type": "date" }
     }
   },
   "auto_fnce_orgn_refn_clse": {
@@ -40,8 +39,7 @@
       "SRC_SYS_CD": { "desc": "source system", "type": "string" },
       "CLSE_TASK_CRE_ET_TS": { "desc": "task creation end time", "type": "timestamp" },
       "UPDT_USR_ID": { "desc": "update user id", "type": "string" },
-      "EFF_DT": { "desc": "effective date", "type": "date" },
-      "ETL_TS": { "desc": "ETL timestamp", "type": "timestamp" }
+      "EFF_DT": { "desc": "effective date", "type": "date" }
     }
   },
   "auto_fnce_orgn_refn_elg": {
