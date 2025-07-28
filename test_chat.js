@@ -144,37 +144,6 @@ function renderCharts(wrapper, dataArray) {
   const keys = Object.keys(sample);
   console.log("📦 Keys available:", keys);
 
-  // const tableRules = {
-  //   accounts: {
-  //     flags: ["appl_aprv_in", "bk_in"],
-  //     categories: [],
-  //     numerics: ["aprv_loan_am", "aprv_loan_pymt_am", "aprv_pymt_am"],
-  //   },
-  //   auto_fnce_orgn_refn_elg: {
-  //     flags: ["refn_el_in", "state_alow_in"],
-  //     categories: ["state_cd"],
-  //   },
-  //   auto_fnce_orgn_refn_clsng_fee: {
-  //     flags: [],
-  //     categories: ["lien_hldr_nm"],
-  //     numerics: ["orgn_loan_pyf_am", "vhcl_fee_am", "addl_fee_am"],
-  //   },
-  //   auto_fnce_orgn_refn_clse: {
-  //     flags: ["sts_cd"],
-  //     categories: ["clse_task_stg_sts_tx"],
-  //   },
-  // };
-
-  // const detectedTable = keys.includes("appl_aprv_in")
-  //   ? "accounts"
-  //   : keys.includes("refn_el_in")
-  //   ? "auto_fnce_orgn_refn_elg"
-  //   : keys.includes("lien_hldr_nm")
-  //   ? "auto_fnce_orgn_refn_clsng_fee"
-  //   : keys.includes("clse_task_stg_sts_tx")
-  //   ? "auto_fnce_orgn_refn_clse"
-  //   : null;
-
   const tableRules = {
     ACCOUNTS: {
       flags: ["APPL_APRV_IN", "BK_IN"],
