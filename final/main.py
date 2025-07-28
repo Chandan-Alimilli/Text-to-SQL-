@@ -1,24 +1,51 @@
-
-
+import logging
+import sys
+import importlib
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from mapper import generate_sql_query
+from mapper import generate_sql_query, business_terms
 from rag_retriever import retrieve_relevant_table, schema_metadata
 from db import execute_sql
 from followup_handler import is_follow_up_prompt, get_followup_query
-import logging
-import sys
 import auto_progress
 import json
-from mapper import business_terms
 
-# Configure logging with console output
+# Configure logging with console output and file handler for persistence
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("app_debug.log")  # Logs to file for server-side review
+    ]
 )
 logger = logging.getLogger("main")
+
+# Attempt to import modules with error handling
+try:
+    logger.info("🔄 Initializing module imports...")
+    for module in ['mapper', 'rag_retriever', 'db', 'followup_handler', 'auto_progress']:
+        importlib.import_module(module)
+        logger.info(f"✅ Successfully imported module: {module}")
+except ImportError as e:
+    logger.error(f"❌ Import error occurred: {e}")
+    raise
+except Exception as e:
+    logger.error(f"❌ Unexpected error during import: {e}")
+    raise
+
+# Initialize database connection and log status
+try:
+    logger.info("🔗 Attempting to establish database connection...")
+    # Test connection with a simple query
+    test_result = execute_sql("SELECT 1")
+    if test_result and isinstance(test_result, list):
+        logger.info("✅ Database connection established successfully.")
+    else:
+        logger.warning("⚠️ Database connection test returned unexpected result: {test_result}")
+except Exception as e:
+    logger.error(f"❌ Database connection failed: {e}")
+    raise
 
 app = FastAPI()
 
@@ -44,7 +71,7 @@ async def get_data(request: Request):
 
     try:
         # Check if it's a follow-up
-        logger.debug(f"Checking if prompt is follow-up: '{prompt}'")
+        logger.debug(f"🔍 Checking if prompt is follow-up: '{prompt}'")
         if is_follow_up_prompt(prompt):
             logger.info("🔄 Detected follow-up query. Attempting resolution...")
             sql = get_followup_query(prompt, memory_context)
@@ -72,6 +99,7 @@ async def get_data(request: Request):
                 logger.info(f"🧠 Generated auto progress SQL: '{sql}'")
 
                 # Execute SQL to fetch data
+                logger.debug(f"🚀 Executing auto progress SQL: '{sql}'")
                 result = execute_sql(sql)
                 if not result or not isinstance(result, list):
                     logger.warning("⚠️ No data or invalid data returned from auto progress query.")
@@ -103,24 +131,26 @@ async def get_data(request: Request):
                 }
 
             # Normal prompt
-            logger.debug("Processing as normal prompt")
+            logger.debug("🔍 Processing as normal prompt")
             rag_data = retrieve_relevant_table(prompt)
             logger.info(f"📥 RAG Matches: {rag_data}")
 
             if not rag_data:
-                logger.error("No relevant table found by RAG retriever")
+                logger.error("❌ No relevant table found by RAG retriever")
                 return {"response": "❌ No relevant table found for the prompt.", "data": []}
 
             matched_table = list(rag_data.keys())[0]
             matched_metadata = rag_data.get(matched_table)
 
             if not matched_metadata or not isinstance(matched_metadata, dict):
+                logger.error("❌ Invalid matched_metadata: None or not a dictionary")
                 raise ValueError("Invalid matched_metadata: None or not a dictionary")
 
             sql = generate_sql_query(prompt, matched_table, matched_metadata, rag_data, schema_metadata)
             logger.info(f"🧠 SQL Query generated: '{sql}'")
 
         # Execute SQL for non-progress, non-follow-up prompts
+        logger.debug(f"🚀 Executing SQL: '{sql}'")
         result = execute_sql(sql)
 
         # Save to memory for normal prompts only
@@ -133,7 +163,7 @@ async def get_data(request: Request):
             })
             if len(memory_context) > 1:
                 memory_context.pop(0)
-            logger.debug(f"Memory context updated: {memory_context}")
+            logger.debug(f"🗂️ Memory context updated: {memory_context}")
 
         return {
             "response": "✅ Query executed successfully.",
@@ -142,10 +172,13 @@ async def get_data(request: Request):
         }
 
     except Exception as e:
-        logger.error(f"❌ Failed to generate SQL: {e}")
+        logger.error(f"❌ Failed to process request: {e}", exc_info=True)
         return {
-            "response": f"❌ Failed to generate SQL: {str(e)}",
+            "response": f"❌ Failed to process request: {str(e)}",
             "data": []
         }
-    
-    
+
+if __name__ == "__main__":
+    logger.info("🚀 Starting application...")
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

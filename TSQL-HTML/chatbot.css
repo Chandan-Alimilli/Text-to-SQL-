@@ -521,8 +521,8 @@ body.hide-header .header {
 
 /* pie-chart-size.css */
 .pie-chart-canvas {
-  max-height: 400px;
-  max-width: 400px;
+  max-height: 360px;
+  max-width: 360px;
   background: linear-gradient(to right,  var(--end) var(--card-color)) ;; /* Fixed syntax */
   border-radius: 12px;
   padding: 12px;
@@ -568,7 +568,7 @@ body.hide-header .header {
 }
 
 .flag-bar-chart{
-  background:linear-gradient(to right, #5983ad, #f2f4fa);
+  background:linear-gradient(to right, #5983ad, #0568d9);
 }
 
 .pie-chart-segment-0 {

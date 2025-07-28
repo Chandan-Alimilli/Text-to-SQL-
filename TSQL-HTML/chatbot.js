@@ -705,7 +705,7 @@ function renderCharts(wrapper, dataArray) {
   // ✅ Pie charts for categories
   for (const key of categories) {
     const canvas = document.createElement("canvas");
-    canvas.className = "pie-chart-canvas";
+    canvas.className = "pie-chart-canva";
     if (!document.body.classList.contains("light_mode")) {
       canvas.classList.add("dark-mode");
     }
@@ -731,11 +731,11 @@ function renderCharts(wrapper, dataArray) {
           {
             data: Object.values(counts),
             backgroundColor: [
-              "#1548a0",
+              "#1976d2",
+              "#03a393",
               "#0775f3",
-              "#080425",
-              "#09c1fe",
-              "#092afe",
+              "#05ead3",
+              "#5983ad",
             ].slice(0, Object.keys(counts).length),
           },
         ],
