@@ -905,6 +905,7 @@
 // Remove the entire chartScript block (lines 1-25)
 
 // Initialize Chart.js and app logic
+
 document.addEventListener("DOMContentLoaded", () => {
   if (window.Chart) {
     console.log("✅ Chart.js is available");
