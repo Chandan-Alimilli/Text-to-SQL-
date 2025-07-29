@@ -160,8 +160,7 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //       numerics: ["ORGN_LOAN_PYF_AM", "VHCL_FEE_AM", "ADDL_FEE_AM"],
 //     },
 //     AUTO_FNCE_ORGN_REFN_CLSE: {
-//       flags: ["STS_CD"],
-//       categories: ["CLSE_TASK_STG_STS_TX"],
+//       categories: ["CLSE_TASK_STG_STS_TX", ""],
 //     },
 //   };
 
@@ -191,10 +190,14 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 
 //   let chartCount = 0;
 
-//   // ✅ Special bar chart: Approved vs Booked for "accounts" table
-//   if (detectedTable === "accounts") {
-//     const approvedCount = dataArray.filter((d) => d.APPL_APRV_IN === 1).length;
-//     const bookedCount = dataArray.filter((d) => d.BK_IN === 1).length;
+//   // ✅ Special bar chart: Approved vs Booked for "ACCOUNTS" table
+//   if (detectedTable === "ACCOUNTS") {
+//     const approvedCount = dataArray.filter((d) =>
+//       [1, true].includes(d.APPL_APRV_IN)
+//     ).length;
+//     const bookedCount = dataArray.filter((d) =>
+//       [1, true].includes(d.BK_IN)
+//     ).length;
 
 //     const approvalCanvas = document.createElement("canvas");
 //     approvalCanvas.className = "approval-bar-chart";
@@ -204,6 +207,16 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //     approvalCanvas.style.borderRadius = "10px";
 //     wrapper.appendChild(approvalCanvas);
 
+//     const ctx = approvalCanvas.getContext("2d");
+//     const gradientColors = [
+//       ctx.createLinearGradient(0, 0, approvalCanvas.width, 0),
+//       ctx.createLinearGradient(0, 0, approvalCanvas.width, 0),
+//     ];
+//     gradientColors[0].addColorStop(0, "#0775f3");
+//     gradientColors[0].addColorStop(1, "#02053b");
+//     gradientColors[1].addColorStop(0, "#ff7043");
+//     gradientColors[1].addColorStop(1, "#701d03");
+
 //     new Chart(approvalCanvas, {
 //       type: "bar",
 //       data: {
@@ -212,7 +225,7 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //           {
 //             label: "Applications",
 //             data: [approvedCount, bookedCount],
-//             backgroundColor: ["#1976d2", "#26a69a"],
+//             backgroundColor: gradientColors,
 //             borderRadius: 6,
 //           },
 //         ],
@@ -237,10 +250,17 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //     chartCount++;
 //   }
 
-//   // ✅ Flag-based bar charts (1 vs 0)
+//   // ✅ Flag-based bar charts (1 vs 0 or true vs false)
 //   for (const key of flags) {
-//     const trueCount = dataArray.filter((d) => d[key] === 1).length;
-//     const falseCount = dataArray.filter((d) => d[key] === 0).length;
+//     const trueCount = dataArray.filter((d) =>
+//       [1, true].includes(d[key])
+//     ).length;
+//     const falseCount = dataArray.filter((d) => {
+//       const value = d[key];
+//       return (
+//         value === null || value === undefined || [0, false].includes(value)
+//       );
+//     }).length;
 
 //     const canvas = document.createElement("canvas");
 //     canvas.className = "flag-bar-chart";
@@ -250,15 +270,25 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //     canvas.style.borderRadius = "10px";
 //     wrapper.appendChild(canvas);
 
+//     const ctx = canvas.getContext("2d");
+//     const gradientColors = [
+//       ctx.createLinearGradient(0, 0, canvas.width, 0),
+//       ctx.createLinearGradient(0, 0, canvas.width, 0),
+//     ];
+//     gradientColors[0].addColorStop(0, "#4294f1");
+//     gradientColors[0].addColorStop(1, "#02053b");
+//     gradientColors[1].addColorStop(0, "#0511fd");
+//     gradientColors[1].addColorStop(1, "#02053b");
+
 //     new Chart(canvas, {
 //       type: "bar",
 //       data: {
-//         labels: ["Yes (1)", "No (0)"],
+//         labels: ["Yes (1/True)", "No (0/False)"],
 //         datasets: [
 //           {
 //             label: key,
 //             data: [trueCount, falseCount],
-//             backgroundColor: ["#1976d2", "#ff7043"],
+//             backgroundColor: gradientColors,
 //             borderRadius: 6,
 //           },
 //         ],
@@ -304,20 +334,42 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
 //       return acc;
 //     }, {});
 
+//     const ctx = canvas.getContext("2d");
+//     const gradientColors = [];
+//     const data = Object.values(counts);
+//     const labels = Object.keys(counts);
+
+//     // Define a set of base gradient pairs
+//     const gradientPairs = [
+//       { start: "#88b8ff", end: "#02053b" },
+//       { start: "#0775f3", end: "#02053b" },
+//       { start: "#26a69a", end: "#02053b" },
+//       { start: "#ff7043", end: "#02053b" },
+//       { start: "#ab47bc", end: "#02053b" },
+//       { start: "#ff7043", end: "#701d03" },
+//       { start: "#b59c52", end: "#f0b505" },
+//       { start: "#03a9f4", end: "#0288d1" },
+//       { start: "#ffca28", end: "#ab47bc" },
+//       { start: "#ab47bc", end: "#8e24aa" },
+//     ];
+
+//     // Create unique gradients for each segment
+//     for (let i = 0; i < data.length; i++) {
+//       const pairIndex = i % gradientPairs.length;
+//       const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+//       gradient.addColorStop(0, gradientPairs[pairIndex].start);
+//       gradient.addColorStop(1, gradientPairs[pairIndex].end);
+//       gradientColors.push(gradient);
+//     }
+
 //     new Chart(canvas, {
 //       type: "pie",
 //       data: {
-//         labels: Object.keys(counts),
+//         labels: labels,
 //         datasets: [
 //           {
-//             data: Object.values(counts),
-//             backgroundColor: [
-//               "#1976d2",
-//               "#03a393",
-//               "#ff7043",
-//               "#05ead3",
-//               "#5983ad",
-//             ].slice(0, Object.keys(counts).length),
+//             data: data,
+//             backgroundColor: gradientColors,
 //           },
 //         ],
 //       },
@@ -506,12 +558,14 @@ function renderCharts(wrapper, dataArray) {
 
   // ✅ Special bar chart: Approved vs Booked for "ACCOUNTS" table
   if (detectedTable === "ACCOUNTS") {
-    const approvedCount = dataArray.filter((d) =>
-      [1, true].includes(d.APPL_APRV_IN)
-    ).length;
-    const bookedCount = dataArray.filter((d) =>
-      [1, true].includes(d.BK_IN)
-    ).length;
+    const approvedCount = dataArray.filter((d) => {
+      const value = d.APPL_APRV_IN;
+      return value === 1 || value === true || value === "1" || value === "true";
+    }).length;
+    const bookedCount = dataArray.filter((d) => {
+      const value = d.BK_IN;
+      return value === 1 || value === true || value === "1" || value === "true";
+    }).length;
 
     const approvalCanvas = document.createElement("canvas");
     approvalCanvas.className = "approval-bar-chart";
@@ -566,13 +620,19 @@ function renderCharts(wrapper, dataArray) {
 
   // ✅ Flag-based bar charts (1 vs 0 or true vs false)
   for (const key of flags) {
-    const trueCount = dataArray.filter((d) =>
-      [1, true].includes(d[key])
-    ).length;
+    const trueCount = dataArray.filter((d) => {
+      const value = d[key];
+      return value === 1 || value === true || value === "1" || value === "true";
+    }).length;
     const falseCount = dataArray.filter((d) => {
       const value = d[key];
       return (
-        value === null || value === undefined || [0, false].includes(value)
+        value === 0 ||
+        value === false ||
+        value === "0" ||
+        value === "false" ||
+        value === null ||
+        value === undefined
       );
     }).length;
 
@@ -653,7 +713,6 @@ function renderCharts(wrapper, dataArray) {
     const data = Object.values(counts);
     const labels = Object.keys(counts);
 
-    // Define a set of base gradient pairs
     const gradientPairs = [
       { start: "#88b8ff", end: "#02053b" },
       { start: "#0775f3", end: "#02053b" },
@@ -667,7 +726,6 @@ function renderCharts(wrapper, dataArray) {
       { start: "#ab47bc", end: "#8e24aa" },
     ];
 
-    // Create unique gradients for each segment
     for (let i = 0; i < data.length; i++) {
       const pairIndex = i % gradientPairs.length;
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
@@ -713,7 +771,6 @@ function renderCharts(wrapper, dataArray) {
       .sort((a, b) => new Date(a[dateKey]) - new Date(b[dateKey]));
     if (sorted.length === 0) return;
 
-    // Bar chart
     const barCanvas = document.createElement("canvas");
     barCanvas.className = "bar-chart-canvas";
     barCanvas.style.height = "180px";
@@ -761,7 +818,6 @@ function renderCharts(wrapper, dataArray) {
     });
     chartCount++;
 
-    // Line chart
     const lineCanvas = document.createElement("canvas");
     lineCanvas.className = "line-chart-canvas";
     lineCanvas.style.height = "180px";

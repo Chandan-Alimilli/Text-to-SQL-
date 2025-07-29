@@ -1,4 +1,3 @@
-
 # import re
 # import json
 # import spacy
@@ -302,46 +301,73 @@
 # def extract_direct_column_filters(prompt: str, metadata_columns: dict, filtered_columns: set = None) -> list:
 #     """Extract direct SQL filters (e.g., "STATE_CODE = 'NY'") from prompt, avoiding columns with comparative filters."""
 #     filters = []
-#     prompt_lower = normalize_text(prompt)
-#     ignore_values = {"in", "on", "at", "of", "to", "for", "from", "by", "with"}
-#     doc = nlp(prompt)
 #     filtered_columns = filtered_columns or set()  # Default to empty set if not provided
+#     ignore_values = {"in", "on", "at", "of", "to", "for", "from", "by", "with", "is", "and"}
 
 #     try:
-#         # Dependency parsing for direct filters
+#         # Extract quoted phrases first
+#         quoted_phrases = re.findall(r"['\"]([^'\"]+)['\"]", prompt)
+#         prompt_lower = prompt.lower()
+#         for phrase in quoted_phrases:
+#             for col, desc in metadata_columns.items():
+#                 if isinstance(desc, dict) and desc.get("type") != "numeric" and col.upper() not in filtered_columns:
+#                     col_lower = col.lower()
+#                     desc_lower = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
+#                     # Check if column or description appears before the quoted phrase
+#                     pattern = rf"(?:{re.escape(desc_lower)}|{re.escape(col_lower)})\s*(?:is\s+|from\s+|with\s+|of\s+)?['\"]{re.escape(phrase)}['\"]"
+#                     if re.search(pattern, prompt_lower):
+#                         # Preserve original case of the quoted phrase
+#                         filters.append(f"{col.upper()} = '{phrase}'")
+#                         logger.debug(f"Parsed quoted direct filter: {col.upper()} = '{phrase}'")
+
+#         # Dependency parsing for non-quoted multi-word or single-word filters
+#         doc = nlp(prompt)
 #         for token in doc:
 #             if token.dep_ in ("attr", "dobj", "pobj"):
 #                 for col, desc in metadata_columns.items():
-#                     col_lower = col.lower()
-#                     desc_lower = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
-#                     if (fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_lower)) and col.upper() not in filtered_columns:
-#                         if metadata_columns[col]["type"] == "numeric":
-#                             continue  # Skip numeric columns to avoid duplicate equality filters
-#                         for child in token.head.children:
-#                             if child.pos_ in ("NOUN", "PROPN", "NUM") and child.text.lower() not in ignore_values:
-#                                 value = child.text.strip().lower()
-#                                 value = f"'{value.upper()}'" if not value.replace('.', '').isdigit() else value
+#                     if isinstance(desc, dict) and desc.get("type") != "numeric" and col.upper() not in filtered_columns:
+#                         col_lower = col.lower()
+#                         desc_lower = desc["desc"].lower()
+#                         if fuzzy_match(token.text, col_lower) or fuzzy_match(token.text, desc_lower):
+#                             # Collect tokens until a condition boundary or end
+#                             value_tokens = []
+#                             current_token = token.head
+#                             while current_token and current_token.text.lower() not in ignore_values:
+#                                 for child in current_token.children:
+#                                     if child.pos_ in ("NOUN", "PROPN", "NUM") and child.text.lower() not in ignore_values:
+#                                         value_tokens.append(child.text)
+#                                 current_token = next((c for c in current_token.children if c.dep_ in ("conj", "appos")), None)
+#                                 if not current_token or current_token.text.lower() == "and":
+#                                     break
+#                             if value_tokens:
+#                                 value = " ".join(value_tokens).strip()
+#                                 # Skip if value is in quoted_phrases to avoid duplication
+#                                 if any(phrase in value for phrase in quoted_phrases):
+#                                     continue
+#                                 # Preserve original case for non-quoted values
+#                                 value = f"'{value}'" if not value.replace('.', '').isdigit() else value
 #                                 filters.append(f"{col.upper()} = {value}")
 #                                 logger.debug(f"Parsed direct filter: {col.upper()} = {value}")
 #                                 break
 
-#         # Regex fallback
+#         # Regex fallback for non-quoted multi-word or single-word filters
 #         for col, desc in metadata_columns.items():
-#             col_lower = col.lower()
-#             desc_lower = desc["desc"].lower() if isinstance(desc, dict) else desc.lower()
-#             if col.upper() in filtered_columns or metadata_columns[col]["type"] == "numeric":
-#                 continue  # Skip numeric columns or those with comparative filters
-#             pattern = rf"(?:{desc_lower}|{col_lower})\s+(?:is\s+|from\s+|with\s+|of\s+)?([a-zA-Z0-9\-'.]+)"
-#             matches = re.findall(pattern, prompt_lower)
-#             for match in matches:
-#                 value = match.strip().lower()
-#                 if value in ignore_values:
-#                     continue
-#                 value = f"'{value.upper()}'" if not value.replace('.', '').isdigit() else value
-#                 filters.append(f"{col.upper()} = {value}")
-#                 logger.debug(f"Regex parsed direct filter: {col.upper()} = {value}")
+#             if isinstance(desc, dict) and desc.get("type") != "numeric" and col.upper() not in filtered_columns:
+#                 col_lower = col.lower()
+#                 desc_lower = desc["desc"].lower()
+#                 # Match multi-word or single-word values after column/description
+#                 pattern = rf"(?:{re.escape(desc_lower)}|{re.escape(col_lower)})\s*(?:is\s+|from\s+|with\s+|of\s+)?([a-zA-Z0-9\s\-'.]+?)(?=\s*(?:and\s|$|with\s|whose\s|from\s|between\s|$))"
+#                 matches = re.findall(pattern, prompt)
+#                 for match in matches:
+#                     value = match.strip()
+#                     if value.lower() in ignore_values or any(phrase in value for phrase in quoted_phrases):
+#                         continue
+#                     # Preserve original case for non-quoted values
+#                     value = f"'{value}'" if not value.replace('.', '').isdigit() else value
+#                     filters.append(f"{col.upper()} = {value}")
+#                     logger.debug(f"Regex parsed direct filter: {col.upper()} = {value}")
 
-#         # Remove duplicates
+#         # Remove duplicates while preserving order
 #         filters = list(dict.fromkeys(filters))
 #         logger.info(f"Extracted direct filters: {filters}")
 #         return filters
@@ -349,32 +375,6 @@
 #     except Exception as e:
 #         logger.error(f"Error extracting direct filters: {e}")
 #         return []
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -702,6 +702,7 @@ def extract_direct_column_filters(prompt: str, metadata_columns: dict, filtered_
     filters = []
     filtered_columns = filtered_columns or set()  # Default to empty set if not provided
     ignore_values = {"in", "on", "at", "of", "to", "for", "from", "by", "with", "is", "and"}
+    column_values = {}  # Track values per column for IN clause
 
     try:
         # Extract quoted phrases first
@@ -715,8 +716,8 @@ def extract_direct_column_filters(prompt: str, metadata_columns: dict, filtered_
                     # Check if column or description appears before the quoted phrase
                     pattern = rf"(?:{re.escape(desc_lower)}|{re.escape(col_lower)})\s*(?:is\s+|from\s+|with\s+|of\s+)?['\"]{re.escape(phrase)}['\"]"
                     if re.search(pattern, prompt_lower):
-                        # Preserve original case of the quoted phrase
-                        filters.append(f"{col.upper()} = '{phrase}'")
+                        # Add to column_values for potential IN clause
+                        column_values.setdefault(col.upper(), []).append(phrase)
                         logger.debug(f"Parsed quoted direct filter: {col.upper()} = '{phrase}'")
 
         # Dependency parsing for non-quoted multi-word or single-word filters
@@ -735,39 +736,58 @@ def extract_direct_column_filters(prompt: str, metadata_columns: dict, filtered_
                                 for child in current_token.children:
                                     if child.pos_ in ("NOUN", "PROPN", "NUM") and child.text.lower() not in ignore_values:
                                         value_tokens.append(child.text)
+                                    elif child.text in (",", "and"):
+                                        # Handle multiple values for the same column
+                                        value = " ".join(value_tokens).strip()
+                                        if value and not any(phrase in value for phrase in quoted_phrases):
+                                            column_values.setdefault(col.upper(), []).append(value)
+                                            logger.debug(f"Parsed direct filter value: {col.upper()} = '{value}'")
+                                        value_tokens = []
                                 current_token = next((c for c in current_token.children if c.dep_ in ("conj", "appos")), None)
-                                if not current_token or current_token.text.lower() == "and":
+                                if not current_token or current_token.text.lower() in (",", "and"):
                                     break
+                            # Add remaining value if any
                             if value_tokens:
                                 value = " ".join(value_tokens).strip()
-                                # Skip if value is in quoted_phrases to avoid duplication
-                                if any(phrase in value for phrase in quoted_phrases):
-                                    continue
-                                # Preserve original case for non-quoted values
-                                value = f"'{value}'" if not value.replace('.', '').isdigit() else value
-                                filters.append(f"{col.upper()} = {value}")
-                                logger.debug(f"Parsed direct filter: {col.upper()} = {value}")
-                                break
+                                if value and not any(phrase in value for phrase in quoted_phrases):
+                                    column_values.setdefault(col.upper(), []).append(value)
+                                    logger.debug(f"Parsed direct filter value: {col.upper()} = '{value}'")
 
         # Regex fallback for non-quoted multi-word or single-word filters
         for col, desc in metadata_columns.items():
             if isinstance(desc, dict) and desc.get("type") != "numeric" and col.upper() not in filtered_columns:
                 col_lower = col.lower()
                 desc_lower = desc["desc"].lower()
-                # Match multi-word or single-word values after column/description
-                pattern = rf"(?:{re.escape(desc_lower)}|{re.escape(col_lower)})\s*(?:is\s+|from\s+|with\s+|of\s+)?([a-zA-Z0-9\s\-'.]+?)(?=\s*(?:and\s|$|with\s|whose\s|from\s|between\s|$))"
+                # Match multi-word or single-word values, handling comma or 'and' separators
+                pattern = rf"(?:{re.escape(desc_lower)}|{re.escape(col_lower)})\s*(?:is\s+|from\s+|with\s+|of\s+)?([a-zA-Z0-9\s\-'.]+?)(?=\s*(?:,|and\s|with\s|whose\s|from\s|between\s|$))"
                 matches = re.findall(pattern, prompt)
                 for match in matches:
-                    value = match.strip()
-                    if value.lower() in ignore_values or any(phrase in value for phrase in quoted_phrases):
-                        continue
-                    # Preserve original case for non-quoted values
-                    value = f"'{value}'" if not value.replace('.', '').isdigit() else value
-                    filters.append(f"{col.upper()} = {value}")
-                    logger.debug(f"Regex parsed direct filter: {col.upper()} = {value}")
+                    # Split on commas or 'and' to capture multiple values
+                    values = re.split(r'\s*,\s*|\s+and\s+', match.strip())
+                    for value in values:
+                        value = value.strip()
+                        if value.lower() in ignore_values or any(phrase in value for phrase in quoted_phrases):
+                            continue
+                        if value:
+                            column_values.setdefault(col.upper(), []).append(value)
+                            logger.debug(f"Regex parsed direct filter value: {col.upper()} = '{value}'")
 
-        # Remove duplicates while preserving order
-        filters = list(dict.fromkeys(filters))
+        # Build filters from column_values
+        for col, values in column_values.items():
+            # Remove duplicates while preserving order
+            unique_values = list(dict.fromkeys(values))
+            if len(unique_values) > 1:
+                # Use IN clause for multiple values
+                formatted_values = [f"'{v}'" if not v.replace('.', '').isdigit() else v for v in unique_values]
+                filters.append(f"{col} IN ({', '.join(formatted_values)})")
+                logger.debug(f"Generated IN clause: {col} IN ({', '.join(formatted_values)})")
+            elif unique_values:
+                # Use = for single value
+                value = unique_values[0]
+                value = f"'{value}'" if not value.replace('.', '').isdigit() else value
+                filters.append(f"{col} = {value}")
+                logger.debug(f"Generated single value filter: {col} = {value}")
+
         logger.info(f"Extracted direct filters: {filters}")
         return filters
 
