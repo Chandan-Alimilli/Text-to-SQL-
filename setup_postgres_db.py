@@ -11,7 +11,7 @@ conn = psycopg2.connect(
 
 cursor = conn.cursor()
 
-sql_file_path = "final_auto_finance_cleaned.sql"
+sql_file_path = "mm.sql"
 
 # ✅ Read SQL script
 with open(sql_file_path, "r", encoding="utf-8") as f:

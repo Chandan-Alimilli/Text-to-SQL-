@@ -32,8 +32,8 @@
     "description": "refinance closing task information",
     "columns": {
       "APPL_NB": { "desc": "application number", "type": "string" },
-      "CLSE_TASK_STG_TX": { "desc": "closing task stage text", "type": "string" },
-      "CLSE_TASK_STG_STS_TX": { "desc": "closing task status text", "type": "string" },
+      "CLSE_TASK_STG_TX": { "desc": "closing stage", "type": "string" },
+      "CLSE_TASK_STG_STS_TX": { "desc": "closing task", "type": "string" },
       "CLSE_TASK_CRE_TS": { "desc": "closing task creation time", "type": "timestamp" },
       "SNPST_DT": { "desc": "snapshot date", "type": "date" },
       "SRC_SYS_CD": { "desc": "source system", "type": "string" },

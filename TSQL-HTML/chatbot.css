@@ -187,6 +187,8 @@ body.hide-header .header {
 
 .message.user .message-content {
    background: linear-gradient(to right, #0775f3, #02053b);
+   /* background: linear-gradient(to right, #55dccf, #05685e); */
+   /* background: linear-gradient(to right, #55dccf, #05685e); */
   color: #fff;
   border-bottom-right-radius: 0;
 }
