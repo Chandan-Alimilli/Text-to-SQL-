@@ -89,39 +89,54 @@ async def get_data(request: Request):
             is_progress, table = auto_progress.detect_progress_request(prompt)
             if is_progress:
                 logger.info(f"🔄 Detected auto progress request for table: {table}")
-                sql = auto_progress.build_progress_query(prompt, schema_metadata, business_terms)
-                if not sql:
+                progress_query = auto_progress.build_progress_query(prompt, schema_metadata, business_terms)
+                if not progress_query or not progress_query.get("sql"):
                     logger.warning("⚠️ Auto progress query generation failed.")
                     return {
                         "response": "⚠️ Failed to generate auto progress query.",
                         "data": []
                     }
+                sql = progress_query["sql"]
                 logger.info(f"🧠 Generated auto progress SQL: '{sql}'")
 
                 # Execute SQL to fetch data
                 logger.debug(f"🚀 Executing auto progress SQL: '{sql}'")
                 result = execute_sql(sql)
-                if not result or not isinstance(result, list):
-                    logger.warning("⚠️ No data or invalid data returned from auto progress query.")
+                if not result or not isinstance(result, list) or len(result) == 0:
+                    logger.warning(f"⚠️ No data returned from auto progress query. Result: {result}")
                     return {
-                        "response": "⚠️ No data available for auto progress.",
-                        "data": [],
+                        "response": "⚠️ No data available for the specified period. Please check the date range or table data.",
+                        "data": progress_query.get("zero_results", []),
                         "sql": sql
                     }
 
                 # Process result into a table
                 table_data = {}
                 for row in result:
-                    month = row.get("Month")
+                    logger.debug(f"Processing row: {row}")
+                    month = row.get("month")  # Use lowercase 'month' to match SQL alias
                     if month:
                         if month not in table_data:
                             table_data[month] = {}
                         for key, value in row.items():
-                            if key != "Month" and value is not None:
-                                table_data[month][key] = value
+                            # Handle typos and case sensitivity
+                            corrected_key = key.lower()
+                            if corrected_key == "booked_appps":
+                                corrected_key = "booked_apps"
+                            if corrected_key != "month" and value is not None:
+                                table_data[month][corrected_key] = value
+                    else:
+                        logger.warning(f"⚠️ Row missing 'month' key: {row}")
 
                 # Convert to list of dictionaries for JSON
-                json_table = [{"Month": month, **metrics} for month, metrics in table_data.items()]
+                json_table = [{"month": month, **metrics} for month, metrics in table_data.items()]
+                if not json_table:
+                    logger.warning("⚠️ Processed table is empty after processing results.")
+                    return {
+                        "response": "⚠️ No valid data processed for the specified period.",
+                        "data": progress_query.get("zero_results", []),
+                        "sql": sql
+                    }
                 logger.info(f"🧠 Processed auto progress table: {json_table}")
 
                 return {
