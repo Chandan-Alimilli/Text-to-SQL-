@@ -1,9 +1,0 @@
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400047', 'dmvTitel', 'notStarted', '2025-06-17 09:00:00', '2025-06-17', 'BNF', '2025-06-17 10:00:00', 'system_user', '2025-06-17', '2025-06-18 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400048', 'finalReview', 'failed', '2025-06-18 09:00:00', '2025-06-18', 'BNF', '2025-06-18 10:00:00', 'system_user', '2025-06-18', '2025-06-19 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400049', 'payOffDetails', 'moreInfoNeeded', '2025-06-19 09:00:00', '2025-06-19', 'BNF', '2025-06-19 10:00:00', 'system_user', '2025-06-19', '2025-06-20 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400047', 'dmvTitel', 'moreInfoNeeded', '2025-06-17 09:00:00', '2025-06-17', 'BNF', '2025-06-17 10:00:00', 'system_user', '2025-06-17', '2025-06-18 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400048', 'finalReview', 'moreInfoNeeded', '2025-06-18 09:00:00', '2025-06-18', 'BNF', '2025-06-18 10:00:00', 'system_user', '2025-06-18', '2025-06-19 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400049', 'payOffDetails', 'inProgress', '2025-06-19 09:00:00', '2025-06-19', 'BNF', '2025-06-19 10:00:00', 'system_user', '2025-06-19', '2025-06-20 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400047', 'lineQuote', 'inProgress', '2025-06-17 09:00:00', '2025-06-17', 'BNF', '2025-06-17 10:00:00', 'system_user', '2025-06-17', '2025-06-18 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400048', 'payOffSource', 'moreInfoNeeded', '2025-06-18 09:00:00', '2025-06-18', 'BNF', '2025-06-18 10:00:00', 'system_user', '2025-06-18', '2025-06-19 10:00:00');
-INSERT INTO auto_fnce_orgn_refn_clse VALUES ('251261400049', 'payOffDetails', 'notStarted', '2025-06-19 09:00:00', '2025-06-19', 'BNF', '2025-06-19 10:00:00', 'system_user', '2025-06-19', '2025-06-20 10:00:00');

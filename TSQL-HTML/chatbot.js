@@ -38,15 +38,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  micBtn?.addEventListener("click", () => {
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.start();
-    recognition.onresult = (e) => {
-      input.value = e.results[0][0].transcript;
-      sendMessage();
-    };
-  });
+  // micBtn?.addEventListener("click", () => {
+  //   const recognition = new webkitSpeechRecognition();
+  //   recognition.lang = "en-US";
+  //   recognition.start();
+  //   recognition.onresult = (e) => {
+  //     input.value = e.results[0][0].transcript;
+  //     sendMessage();
+  //   };
+  // });
 
   themeToggle?.addEventListener("click", () => {
     document.body.classList.toggle("light_mode");
@@ -75,9 +75,9 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
   let html = `<div class="message-content">`;
   html += `<div class="bot-heading">Data + Query</div>`;
 
-  if (summary?.trim()) {
-    html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
-  }
+  // if (summary?.trim()) {
+  //   html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
+  // }
 
   if (!Array.isArray(dataArray) || dataArray.length === 0) {
     html += `<div>No data found.</div>`;

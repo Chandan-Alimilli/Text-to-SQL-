@@ -469,6 +469,10 @@ body.hide-header .header {
   background-color: #c1dbf6;
   color: #000000;
 }
+.response-table tr:nth-child(odd) {
+  background-color: #030c15;
+  color: #ffffff;
+}
 
 .bot-heading {
   font-size: 18px;

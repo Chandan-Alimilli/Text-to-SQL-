@@ -1,3 +1,4 @@
+
 import logging
 import sys
 import importlib
@@ -9,6 +10,7 @@ from db import execute_sql
 from followup_handler import is_follow_up_prompt, get_followup_query
 import auto_progress
 import json
+from summary_utils import generate_summary_from_result  # Import summary function
 
 # Configure logging with console output and file handler for persistence
 logging.basicConfig(
@@ -24,7 +26,7 @@ logger = logging.getLogger("main")
 # Attempt to import modules with error handling
 try:
     logger.info("🔄 Initializing module imports...")
-    for module in ['mapper', 'rag_retriever', 'db', 'followup_handler', 'auto_progress']:
+    for module in ['mapper', 'rag_retriever', 'db', 'followup_handler', 'auto_progress', 'summary_utils']:
         importlib.import_module(module)
         logger.info(f"✅ Successfully imported module: {module}")
 except ImportError as e:
@@ -80,10 +82,11 @@ async def get_data(request: Request):
                 logger.error(f"⚠️ Follow-up query failed: No valid SQL generated. Memory context: {memory_context}")
                 return {
                     "response": "⚠️ Unable to process follow-up query. Please specify the application type or provide more context.",
-                    "data": []
+                    "data": [],
+                    "summary": "No summary available due to invalid follow-up query."
                 }
 
-            logger.info(f"🧠 Resolved follow-up SQL: '{sql}'")
+            logger.info(f"Resolved follow-up SQL: '{sql}'")
         else:
             # Check for auto progress request
             is_progress, table = auto_progress.detect_progress_request(prompt)
@@ -94,20 +97,22 @@ async def get_data(request: Request):
                     logger.warning("⚠️ Auto progress query generation failed.")
                     return {
                         "response": "⚠️ Failed to generate auto progress query.",
-                        "data": []
+                        "data": [],
+                        "summary": "No summary available due to failed query generation."
                     }
                 sql = progress_query["sql"]
-                logger.info(f"🧠 Generated auto progress SQL: '{sql}'")
+                logger.info(f"Generated auto progress SQL: '{sql}'")
 
                 # Execute SQL to fetch data
-                logger.debug(f"🚀 Executing auto progress SQL: '{sql}'")
+                logger.debug(f"Executing auto progress SQL: '{sql}'")
                 result = execute_sql(sql)
                 if not result or not isinstance(result, list) or len(result) == 0:
                     logger.warning(f"⚠️ No data returned from auto progress query. Result: {result}")
                     return {
                         "response": "⚠️ No data available for the specified period. Please check the date range or table data.",
                         "data": progress_query.get("zero_results", []),
-                        "sql": sql
+                        "sql": sql,
+                        "summary": "No summary available due to no data returned."
                     }
 
                 # Process result into a table
@@ -135,24 +140,30 @@ async def get_data(request: Request):
                     return {
                         "response": "⚠️ No valid data processed for the specified period.",
                         "data": progress_query.get("zero_results", []),
-                        "sql": sql
+                        "sql": sql,
+                        "summary": "No summary available due to empty processed data."
                     }
-                logger.info(f"🧠 Processed auto progress table: {json_table}")
+                logger.info(f"Processed auto progress table: {json_table}")
 
                 return {
-                    "response": "✅ Auto progress query executed successfully.",
+                    "response": "Auto progress query executed successfully.",
                     "data": json_table,
-                    "sql": sql
+                    "sql": sql,
+                    "summary": "Auto progress summary not implemented yet."  # Placeholder for future implementation
                 }
 
             # Normal prompt
             logger.debug("🔍 Processing as normal prompt")
             rag_data = retrieve_relevant_table(prompt)
-            logger.info(f"📥 RAG Matches: {rag_data}")
+            logger.info(f"RAG Matches: {rag_data}")
 
             if not rag_data:
                 logger.error("❌ No relevant table found by RAG retriever")
-                return {"response": "❌ No relevant table found for the prompt.", "data": []}
+                return {
+                    "response": "❌ No relevant table found for the prompt.",
+                    "data": [],
+                    "summary": "No summary available due to no relevant table found."
+                }
 
             matched_table = list(rag_data.keys())[0]
             matched_metadata = rag_data.get(matched_table)
@@ -165,8 +176,20 @@ async def get_data(request: Request):
             logger.info(f"🧠 SQL Query generated: '{sql}'")
 
         # Execute SQL for non-progress, non-follow-up prompts
-        logger.debug(f"🚀 Executing SQL: '{sql}'")
+        logger.debug(f"Executing SQL: '{sql}'")
         result = execute_sql(sql)
+
+        # Generate summary for normal and follow-up prompts
+        summary = ""
+        if not is_progress:  # Exclude auto-progress queries for now
+            try:
+                # For follow-up, use the table name from memory_context if available
+                table_name = matched_table.upper() if not is_follow_up_prompt(prompt) else memory_context[-1].get("table_name", matched_table.upper())
+                summary = generate_summary_from_result(result, prompt, sql, table_name)
+                logger.info(f"📝 Summary generated: {summary}")
+            except Exception as e:
+                logger.error(f"⚠️ Failed to generate summary: {e}")
+                summary = f"Error generating summary: {str(e)}"
 
         # Save to memory for normal prompts only
         if not is_follow_up_prompt(prompt) and not is_progress:
@@ -178,19 +201,21 @@ async def get_data(request: Request):
             })
             if len(memory_context) > 1:
                 memory_context.pop(0)
-            logger.debug(f"🗂️ Memory context updated: {memory_context}")
+            logger.debug(f"Memory context updated: {memory_context}")
 
         return {
-            "response": "✅ Query executed successfully.",
+            "response": "Query executed successfully.",
             "data": result,
-            "sql": sql
+            "sql": sql,
+            "summary": summary
         }
 
     except Exception as e:
         logger.error(f"❌ Failed to process request: {e}", exc_info=True)
         return {
             "response": f"❌ Failed to process request: {str(e)}",
-            "data": []
+            "data": [],
+            "summary": f"Error generating summary: {str(e)}"
         }
 
 if __name__ == "__main__":
