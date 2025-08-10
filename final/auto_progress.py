@@ -263,6 +263,7 @@ def detect_progress_request(prompt, rag_tables=None):
     progress_keywords = ['progress', 'performance', 'metrics']
     table_keywords = {
         'closing fee table': 'auto_fnce_orgn_refn_clse_fee',
+        'closing fee': 'auto_fnce_orgn_refn_clse_fee',
         'eligible': 'auto_fnce_orgn_refn_elg',
         'closing': 'auto_fnce_orgn_refn_clse',
         'refinance accounts table': 'afnc_dsi_orgn_acct_dy',

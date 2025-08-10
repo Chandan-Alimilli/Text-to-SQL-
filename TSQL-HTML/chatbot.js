@@ -1,3 +1,139 @@
+// document.addEventListener("DOMContentLoaded", () => {
+//   if (window.Chart) {
+//     console.log("✅ Chart.js is available");
+//     window.chartJsReady = true;
+//     Chart.register(
+//       Chart.BarController,
+//       Chart.PieController,
+//       Chart.LinearScale,
+//       Chart.CategoryScale,
+//       Chart.PointElement,
+//       Chart.BarElement,
+//       Chart.ArcElement
+//     );
+//   } else {
+//     console.log("❌ Chart.js not available");
+//     window.chartJsReady = false;
+//   }
+
+//   const input = document.getElementById("user-input");
+//   const chat = document.getElementById("chat-list");
+//   const sendBtn = document.getElementById("send-message-button");
+//   const micBtn = document.getElementById("mic-button");
+//   const themeToggle = document.getElementById("theme-toggle-button");
+
+//   function sendMessage() {
+//     const text = input.value.trim();
+//     if (!text) return;
+//     appendUserMessage(text);
+//     callBackend(text);
+//     input.value = "";
+//   }
+
+//   sendBtn?.addEventListener("click", sendMessage);
+//   input?.addEventListener("keypress", (e) => {
+//     if (e.key === "Enter") {
+//       e.preventDefault();
+//       sendMessage();
+//     }
+//   });
+
+//   // micBtn?.addEventListener("click", () => {
+//   //   const recognition = new webkitSpeechRecognition();
+//   //   recognition.lang = "en-US";
+//   //   recognition.start();
+//   //   recognition.onresult = (e) => {
+//   //     input.value = e.results[0][0].transcript;
+//   //     sendMessage();
+//   //   };
+//   // });
+
+//   themeToggle?.addEventListener("click", () => {
+//     document.body.classList.toggle("light_mode");
+//     themeToggle.textContent = document.body.classList.contains("light_mode")
+//       ? "dark_mode"
+//       : "light_mode";
+//   });
+// });
+
+// function appendUserMessage(text) {
+//   const chat = document.getElementById("chat-list");
+//   const msg = document.createElement("div");
+//   msg.className = "message user";
+//   msg.innerHTML = `<div class="message-content">${text}</div>`;
+//   chat.appendChild(msg);
+//   chat.scrollTop = chat.scrollHeight;
+// }
+
+// function appendBotMessage(sqlQuery, summary, dataArray) {
+//   const chat = document.getElementById("chat-list");
+//   const msg = document.createElement("div");
+//   msg.className = "message bot";
+
+//   const uid = `uid-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+//   let html = `<div class="message-content">`;
+//   html += `<div class="bot-heading">Data + Query</div>`;
+
+//   // if (summary?.trim()) {
+//   //   html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
+//   // }
+
+//   if (!Array.isArray(dataArray) || dataArray.length === 0) {
+//     html += `<div>No data found.</div>`;
+//   } else {
+//     html += `<div class="sql-block"><strong>SQL Query:</strong><br>${
+//       sqlQuery || "No SQL generated"
+//     }</div>`;
+//     html += `<div class="data-table-label"><strong>Data Table:</strong></div>`;
+//     html += `<div class="table-wrapper"><table class="response-table"><thead><tr>`;
+
+//     const headers = Object.keys(dataArray[0]);
+//     headers.forEach((h) => {
+//       html += `<th>${h}</th>`;
+//     });
+
+//     html += `</tr></thead><tbody>`;
+//     dataArray.forEach((row) => {
+//       html += `<tr>`;
+//       headers.forEach((h) => {
+//         html += `<td>${row[h] ?? ""}</td>`;
+//       });
+//       html += `</tr>`;
+//     });
+//     html += `</tbody></table></div>`;
+
+//     // Excel download button
+//     html += `<button class="download-btn" id="${uid}-excel">⬇ Download Excel</button>`;
+//     html += `<div class="chart-wrapper" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:1rem;min-height:200px;"></div>`;
+//   }
+
+//   html += `</div>`;
+//   msg.innerHTML = html;
+//   chat.appendChild(msg);
+//   chat.scrollTop = chat.scrollHeight;
+
+//   // Excel export
+//   const excelBtn = document.getElementById(`${uid}-excel`);
+//   if (excelBtn)
+//     excelBtn.addEventListener("click", () => downloadExcel(dataArray));
+
+//   // Render charts once Chart.js is ready
+//   const wrapper = msg.querySelector(".chart-wrapper");
+//   console.log("📊 DataArray:", JSON.stringify(dataArray, null, 2)); // Debug data
+
+//   const waitForChart = () => {
+//     if (window.chartJsReady) {
+//       console.log("📊 Rendering charts for:", uid);
+//       renderCharts(wrapper, dataArray);
+//     } else {
+//       console.warn("⚠️ Chart.js not ready, retrying...");
+//       setTimeout(waitForChart, 100);
+//     }
+//   };
+//   waitForChart();
+// }
+
 document.addEventListener("DOMContentLoaded", () => {
   if (window.Chart) {
     console.log("✅ Chart.js is available");
@@ -30,6 +166,22 @@ document.addEventListener("DOMContentLoaded", () => {
     input.value = "";
   }
 
+  // Add handleSendMessage to handle form submission
+  function handleSendMessage(event) {
+    event.preventDefault(); // Prevent default form submission
+    sendMessage();
+  }
+
+  micBtn?.addEventListener("click", () => {
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.start();
+    recognition.onresult = (e) => {
+      input.value = e.results[0][0].transcript;
+      sendMessage();
+    };
+  });
+
   sendBtn?.addEventListener("click", sendMessage);
   input?.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
@@ -37,16 +189,6 @@ document.addEventListener("DOMContentLoaded", () => {
       sendMessage();
     }
   });
-
-  // micBtn?.addEventListener("click", () => {
-  //   const recognition = new webkitSpeechRecognition();
-  //   recognition.lang = "en-US";
-  //   recognition.start();
-  //   recognition.onresult = (e) => {
-  //     input.value = e.results[0][0].transcript;
-  //     sendMessage();
-  //   };
-  // });
 
   themeToggle?.addEventListener("click", () => {
     document.body.classList.toggle("light_mode");
@@ -75,9 +217,9 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
   let html = `<div class="message-content">`;
   html += `<div class="bot-heading">Data + Query</div>`;
 
-  // if (summary?.trim()) {
-  //   html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
-  // }
+  if (summary?.trim()) {
+    html += `<div class="summary-block"><strong>Summary:</strong><br>${summary}</div>`;
+  }
 
   if (!Array.isArray(dataArray) || dataArray.length === 0) {
     html += `<div>No data found.</div>`;
@@ -103,7 +245,6 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
     });
     html += `</tbody></table></div>`;
 
-    // Excel download button
     html += `<button class="download-btn" id="${uid}-excel">⬇ Download Excel</button>`;
     html += `<div class="chart-wrapper" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:1rem;min-height:200px;"></div>`;
   }
@@ -113,19 +254,17 @@ function appendBotMessage(sqlQuery, summary, dataArray) {
   chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
 
-  // Excel export
   const excelBtn = document.getElementById(`${uid}-excel`);
   if (excelBtn)
     excelBtn.addEventListener("click", () => downloadExcel(dataArray));
 
-  // Render charts once Chart.js is ready
   const wrapper = msg.querySelector(".chart-wrapper");
-  console.log("📊 DataArray:", JSON.stringify(dataArray, null, 2)); // Debug data
+  console.log("📊 DataArray:", JSON.stringify(dataArray, null, 2));
 
   const waitForChart = () => {
     if (window.chartJsReady) {
       console.log("📊 Rendering charts for:", uid);
-      renderCharts(wrapper, dataArray);
+      renderCharts(wrapper, dataArray); // Assuming renderCharts is defined elsewhere
     } else {
       console.warn("⚠️ Chart.js not ready, retrying...");
       setTimeout(waitForChart, 100);

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -37,6 +37,47 @@
     <p class="disclaimer-text"> POC  -  Talk To Auto Data</p>
   </div>
 
+  <script src="voice.js"></script>
+  <script src="chatbot.js"></script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Talk To Auto Data</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="chatbot.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="node_modules/chart.js/dist/chart.umd.js"></script>
+</head>
+<body class="root">
+  <div class="nav">
+    <img src="https://1000logos.net/wp-content/uploads/2021/05/Chase-logo.png" alt="Chase Logo" height="80">
+    <h2 class="nav-title">Talk To Auto Data</h2>
+  </div>
+  <header class="header">
+    <p class="subtitle">From question to query — turn natural language into real SQL insights</p>
+  </header>
+  <div class="chat-list" id="chat-list"></div>
+  <div class="typing-area">
+    <form class="typing-form" onsubmit="handleSendMessage(event)">
+      <div class="input-wrapper">
+        <input type="text" placeholder="Enter a prompt here" class="typing-input" id="user-input" required />
+        <button id="send-message-button" type="submit" class="icon material-symbols-rounded">send</button>
+      </div>
+      <div class="action-buttons">
+        <span id="theme-toggle-button" class="mode material-symbols-rounded">light_mode</span>
+        <span id="mic-button" class="mic material-symbols-rounded">mic</span>
+      </div>
+    </form>
+    <p class="disclaimer-text"> POC  -  Talk To Auto Data</p>
+  </div>
   <script src="voice.js"></script>
   <script src="chatbot.js"></script>
 </body>
