@@ -21,15 +21,6 @@ if USE_JPM_PROXY:
 # ------------------------------------------------------------------------------
 # ✅ Snowflake Config
 # ------------------------------------------------------------------------------
-SNOWFLAKE_CONFIG = {
-    "account": "ccpbawsuseast1vps.hassium.us-east-1.aws",
-    "user": "F745794",
-    "authenticator": "externalbrowser",
-    "role": "PROD_110575_DA_AUTO_WH_FR",
-    "warehouse": "PROD_110575_DA_AUTO_L_WH",
-    "database": "PROD_110575_ICDW_DB",
-    "schema": "AUTO_V"
-}
 
 # ------------------------------------------------------------------------------
 # ✅ Global Session Holder
